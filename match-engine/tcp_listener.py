@@ -71,3 +71,44 @@ class MessageBuffer:
                 "Discarded incomplete message: size=%s", len(self._buffer)
             )
             self._buffer.clear()
+
+
+import socketserver
+
+from processor import process_resume_and_internship
+
+
+class EventHandler(socketserver.BaseRequestHandler):
+    def handle(self) -> None:
+        buffer = MessageBuffer()
+        logger.info("Client connected: %s", self.client_address)
+        try:
+            while True:
+                data = self.request.recv(65536)
+                if not data:
+                    break
+                for event in buffer.feed(data):
+                    try:
+                        process_resume_and_internship(
+                            event["resume"], event["internship"]
+                        )
+                    except Exception as error:
+                        logger.exception(
+                            "Processor failed: %s: %s", type(error).__name__, error
+                        )
+        except MessageTooLargeError:
+            logger.warning("Closing client connection: message exceeds size limit")
+        except (ConnectionError, OSError) as error:
+            logger.warning("Client socket error: %s", type(error).__name__)
+        finally:
+            buffer.close()
+            logger.info("Client disconnected: %s", self.client_address)
+
+
+class EventServer(socketserver.ThreadingTCPServer):
+    daemon_threads = True
+    allow_reuse_address = True
+
+
+def create_server(host: str, port: int) -> socketserver.ThreadingTCPServer:
+    return EventServer((host, port), EventHandler)
