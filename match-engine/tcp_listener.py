@@ -1,6 +1,8 @@
 import json
+import socketserver
 
 from log_config import get_logger
+from processor import process_resume_and_internship
 
 
 logger = get_logger("tcp_listener")
@@ -71,11 +73,6 @@ class MessageBuffer:
                 "Discarded incomplete message: size=%s", len(self._buffer)
             )
             self._buffer.clear()
-
-
-import socketserver
-
-from processor import process_resume_and_internship
 
 
 class EventHandler(socketserver.BaseRequestHandler):
