@@ -14,6 +14,9 @@ def main() -> None:
         print("ERROR: Cannot open LOG_FILE", file=sys.stderr)
         sys.exit(2)
 
+    # Import application modules only after logging is configured.
+    from event_queue import create_queue, HandlerRegistry, Worker, stop_workers
+    from processor import process_resume_and_internship
     from tcp_listener import create_server
 
     host = os.environ.get("TCP_HOST", "127.0.0.1")
@@ -25,6 +28,22 @@ def main() -> None:
         logger.error("TCP_PORT must be an integer between 1 and 65535")
         sys.exit(2)
 
+    try:
+        max_size = int(os.environ.get("QUEUE_MAX_SIZE", "1000"))
+        if max_size <= 0:
+            raise ValueError
+    except ValueError:
+        logger.error("QUEUE_MAX_SIZE must be a positive integer")
+        sys.exit(2)
+
+    event_queue = create_queue(max_size)
+    registry = HandlerRegistry()
+
+    def process_event(event: dict) -> None:
+        process_resume_and_internship(event["resume"], event["internship"])
+
+    registry.register(process_event)
+    worker = Worker(event_queue, registry)
     server = None
     stopping = threading.Event()
 
@@ -37,12 +56,13 @@ def main() -> None:
 
     signal.signal(signal.SIGTERM, request_shutdown)
     signal.signal(signal.SIGINT, request_shutdown)
+    worker.start()
     try:
         for attempt in range(1, 6):
             if stopping.is_set():
                 return
             try:
-                server = create_server(host, port)
+                server = create_server(host, port, event_queue)
                 break
             except OSError:
                 logger.warning("Bind failed: host=%s port=%s attempt=%s/5", host, port, attempt)
@@ -53,13 +73,19 @@ def main() -> None:
                     return
 
         if not stopping.is_set():
-            logger.info("Server started: host=%s port=%s", host, port)
+            logger.info(
+                "Server started: host=%s port=%s queue_max_size=%s",
+                host, port, max_size,
+            )
             server.serve_forever()
     except KeyboardInterrupt:
         request_shutdown()
     finally:
         if server is not None:
             server.server_close()
+        alive = stop_workers(event_queue, [worker], timeout=30)
+        if alive:
+            logger.warning("Worker shutdown timed out: alive=%s", alive)
 
 
 if __name__ == "__main__":
