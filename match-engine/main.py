@@ -1,7 +1,9 @@
 import os
+import math
 import signal
 import sys
 import threading
+import time
 
 from log_config import get_logger
 
@@ -15,9 +17,9 @@ def main() -> None:
         sys.exit(2)
 
     # Import application modules only after logging is configured.
-    from event_queue import create_queue, HandlerRegistry, Worker, stop_workers
+    from event_queue import create_queue, HandlerRegistry, Worker, drain, stop_workers
     from processor import process_resume_and_internship
-    from tcp_listener import create_server
+    from tcp_listener import create_server, close_clients
 
     host = os.environ.get("TCP_HOST", "127.0.0.1")
     try:
@@ -34,6 +36,14 @@ def main() -> None:
             raise ValueError
     except ValueError:
         logger.error("QUEUE_MAX_SIZE must be a positive integer")
+        sys.exit(2)
+
+    try:
+        shutdown_timeout = float(os.environ.get("SHUTDOWN_TIMEOUT_SECONDS", "30"))
+        if not math.isfinite(shutdown_timeout) or shutdown_timeout <= 0:
+            raise ValueError
+    except ValueError:
+        logger.error("SHUTDOWN_TIMEOUT_SECONDS must be a positive finite number")
         sys.exit(2)
 
     event_queue = create_queue(max_size)
@@ -81,11 +91,24 @@ def main() -> None:
     except KeyboardInterrupt:
         request_shutdown()
     finally:
-        if server is not None:
-            server.server_close()
-        alive = stop_workers(event_queue, [worker], timeout=30)
-        if alive:
-            logger.warning("Worker shutdown timed out: alive=%s", alive)
+        deadline = time.monotonic() + shutdown_timeout
+
+        def remaining_time():
+            return max(0, deadline - time.monotonic())
+
+        try:
+            clients_alive = close_clients(server, remaining_time()) if server else 0
+            undelivered = drain(event_queue, remaining_time())
+            logger.info("drain completed: remaining=%s", undelivered)
+            workers_alive = stop_workers(event_queue, [worker], remaining_time())
+            if undelivered or workers_alive or clients_alive:
+                logger.warning(
+                    "Shutdown timed out: undelivered=%s workers_alive=%s clients_alive=%s",
+                    undelivered, workers_alive, clients_alive,
+                )
+        finally:
+            if server is not None:
+                server.server_close()
 
 
 if __name__ == "__main__":

@@ -3,6 +3,7 @@ import logging
 import os
 from pathlib import Path
 import sys
+import subprocess
 import threading
 import time
 import unittest
@@ -248,6 +249,52 @@ class WorkerTests(BaseTest):
         self.wait_drained()
         self.assertEqual(event_queue.stop_workers(self.pending, [worker], 3), 0)
         self.wait_drained()
+
+    def test_drain_finishes_processed_events(self):
+        calls = []
+        self.registry.register(calls.append)
+        events = [{"id": 1}, {"id": 2}]
+        for event in events:
+            self.pending.put(event)
+        self.start_worker()
+        self.assertEqual(event_queue.drain(self.pending, 3), 0)
+        self.assertEqual(calls, events)
+
+    def test_drain_timeout_counts_inflight_and_queued_events(self):
+        entered = threading.Event()
+
+        def blocking_handler(event):
+            entered.set()
+            self.release.wait()
+
+        self.registry.register(blocking_handler)
+        self.start_worker()
+        self.pending.put({"id": "active"})
+        self.assertTrue(entered.wait(3))
+        self.pending.put({"id": "queued"})
+        started = time.monotonic()
+        self.assertEqual(event_queue.drain(self.pending, 0.05), 2)
+        self.assertLess(time.monotonic() - started, 1)
+        self.release.set()
+        self.assertEqual(event_queue.drain(self.pending, 3), 0)
+
+
+class ShutdownConfigTests(BaseTest):
+    def test_invalid_shutdown_timeout(self):
+        main_path = str(Path(__file__).resolve().parent / "main.py")
+        for value in ("0", "abc", "-1", "nan", "inf"):
+            with self.subTest(value=value):
+                environment = dict(
+                    os.environ, SHUTDOWN_TIMEOUT_SECONDS=value,
+                    TCP_PORT="9000", QUEUE_MAX_SIZE="1000",
+                )
+                result = subprocess.run(
+                    [sys.executable, "-B", main_path], env=environment,
+                    capture_output=True, text=True, timeout=3,
+                )
+                self.assertEqual(result.returncode, 2)
+                self.assertIn("SHUTDOWN_TIMEOUT_SECONDS must be", result.stderr)
+                self.assertNotIn("Traceback", result.stderr)
 
 
 if __name__ == "__main__":

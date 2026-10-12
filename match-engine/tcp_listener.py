@@ -1,5 +1,8 @@
 import json
+import socket
 import socketserver
+import threading
+import time
 
 from log_config import get_logger
 from event_queue import enqueue
@@ -98,6 +101,57 @@ class EventHandler(socketserver.BaseRequestHandler):
 class EventServer(socketserver.ThreadingTCPServer):
     daemon_threads = True
     allow_reuse_address = True
+
+    def __init__(self, *args, **kwargs):
+        self.clients_lock = threading.Lock()
+        self.active_clients = set()
+        self.handler_threads = set()
+        self.closing_clients = False
+        super().__init__(*args, **kwargs)
+
+    def process_request(self, request, client_address):
+        thread = threading.Thread(
+            target=self.process_request_thread,
+            args=(request, client_address),
+            daemon=self.daemon_threads,
+        )
+        with self.clients_lock:
+            if self.closing_clients:
+                self.shutdown_request(request)
+                return
+            self.active_clients.add(request)
+            self.handler_threads.add(thread)
+            try:
+                thread.start()
+            except Exception:
+                self.active_clients.discard(request)
+                self.handler_threads.discard(thread)
+                raise
+
+    def process_request_thread(self, request, client_address):
+        try:
+            super().process_request_thread(request, client_address)
+        finally:
+            with self.clients_lock:
+                self.active_clients.discard(request)
+                self.handler_threads.discard(threading.current_thread())
+
+
+def close_clients(server, timeout: float) -> int:
+    deadline = time.monotonic() + timeout
+    with server.clients_lock:
+        server.closing_clients = True
+        clients = list(server.active_clients)
+        threads = list(server.handler_threads)
+    for client in clients:
+        try:
+            client.shutdown(socket.SHUT_RDWR)
+        except OSError:
+            pass
+        client.close()
+    for thread in threads:
+        thread.join(max(0, deadline - time.monotonic()))
+    return sum(thread.is_alive() for thread in threads)
 
 
 def create_server(host: str, port: int, event_queue) -> socketserver.ThreadingTCPServer:

@@ -338,6 +338,36 @@ class ServerTests(BaseTest):
         client.sendall(LINE)
         self.assert_event_queued()
 
+    def test_close_clients_closes_and_untracks_handler(self):
+        client = self.connect()
+        self.assertTrue(self.capture.wait_for(
+            lambda messages: any("Client connected" in message for message in messages)
+        ))
+        self.assertEqual(tcp_listener.close_clients(self.server, 3), 0)
+        self.assertEqual(client.recv(1), b"")
+        with self.server.clients_lock:
+            self.assertEqual(self.server.active_clients, set())
+            self.assertEqual(self.server.handler_threads, set())
+
+    def test_close_clients_partial_warning_is_size_only(self):
+        client = self.connect()
+        received = threading.Event()
+        original = tcp_listener.MessageBuffer.feed
+
+        def observed_feed(buffer, data):
+            result = original(buffer, data)
+            received.set()
+            return result
+
+        partial = EVENT["resume"]["text"].encode()
+        with patch.object(tcp_listener.MessageBuffer, "feed", observed_feed):
+            client.sendall(partial)
+            self.assertTrue(received.wait(3))
+            self.assertEqual(tcp_listener.close_clients(self.server, 3), 0)
+        warnings = [message for message in self.capture.messages if "incomplete message" in message]
+        self.assertEqual(warnings, [f"Discarded incomplete message: size={len(partial)}"])
+        self.assert_private(self.capture.messages)
+
 
 if __name__ == "__main__":
     unittest.main()

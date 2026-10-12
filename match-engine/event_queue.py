@@ -71,6 +71,17 @@ class Worker:
                 self._queue.task_done()
 
 
+def drain(event_queue, timeout: float) -> int:
+    deadline = time.monotonic() + timeout
+    with event_queue.all_tasks_done:
+        while event_queue.unfinished_tasks:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            event_queue.all_tasks_done.wait(remaining)
+        return event_queue.unfinished_tasks
+
+
 def stop_workers(event_queue, workers, timeout: float) -> int:
     deadline = time.monotonic() + timeout
     for worker in workers:
