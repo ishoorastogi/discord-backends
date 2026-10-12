@@ -18,6 +18,7 @@ with patch.dict(os.environ, {"LOG_LEVEL": "INFO", "LOG_FILE": ""}):
     import log_config
     import processor
     import tcp_listener
+    import event_queue
 
 
 EVENT = {
@@ -25,7 +26,7 @@ EVENT = {
     "internship": {"id": "i1", "description": "PRIVATE_INTERNSHIP_TEXT"},
 }
 LINE = json.dumps(EVENT).encode("utf-8") + b"\n"
-LOGGER_NAMES = ("test_logging", "processor", "tcp_listener")
+LOGGER_NAMES = ("test_logging", "processor", "tcp_listener", "event_queue")
 
 
 def reset_logging():
@@ -64,7 +65,7 @@ class BaseTest(unittest.TestCase):
         self.addCleanup(self.environment.stop)
         self.addCleanup(reset_logging)
         self.capture = Capture()
-        for name in ("processor", "tcp_listener"):
+        for name in ("processor", "tcp_listener", "event_queue"):
             logger = log_config.get_logger(name)
             logger.handlers = [self.capture]
 
@@ -219,7 +220,8 @@ class ServerTests(BaseTest):
     def setUp(self):
         super().setUp()
         self.clients = []
-        self.server = tcp_listener.create_server("127.0.0.1", 0)
+        self.pending = event_queue.create_queue(10)
+        self.server = tcp_listener.create_server("127.0.0.1", 0, self.pending)
         self.thread = threading.Thread(
             target=self.server.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True
         )
@@ -244,15 +246,14 @@ class ServerTests(BaseTest):
         self.clients.append(client)
         return client
 
-    def receipts(self, messages):
-        return sum("resume_id=r1 " in message for message in messages)
-
-    def wait_receipts(self, count):
-        self.assertTrue(self.capture.wait_for(lambda messages: self.receipts(messages) == count))
+    def assert_event_queued(self):
+        self.assertEqual(self.pending.get(timeout=3), EVENT)
+        self.pending.task_done()
+        self.assertTrue(self.pending.empty())
 
     def test_valid_event_once(self):
         self.connect().sendall(LINE)
-        self.wait_receipts(1)
+        self.assert_event_queued()
 
     def test_split_only_after_newline(self):
         client = self.connect()
@@ -267,17 +268,17 @@ class ServerTests(BaseTest):
         with patch.object(tcp_listener.MessageBuffer, "feed", observed_feed):
             client.sendall(LINE[:10])
             self.assertTrue(received.wait(3))
-            self.assertEqual(self.receipts(self.capture.messages), 0)
+            self.assertTrue(self.pending.empty())
             received.clear()
             client.sendall(LINE[10:-1])
             self.assertTrue(received.wait(3))
-            self.assertEqual(self.receipts(self.capture.messages), 0)
+            self.assertTrue(self.pending.empty())
             client.sendall(b"\n")
-            self.wait_receipts(1)
+            self.assert_event_queued()
 
     def test_bad_then_valid_same_connection(self):
         self.connect().sendall(b"bad-json\n" + LINE)
-        self.wait_receipts(1)
+        self.assert_event_queued()
         self.assertTrue(any("invalid JSON" in message for message in self.capture.messages))
 
     def test_oversized_disconnect_and_new_connection(self):
@@ -294,7 +295,7 @@ class ServerTests(BaseTest):
             lambda messages: any("exceeds size limit" in message for message in messages)
         ))
         self.connect().sendall(LINE)
-        self.wait_receipts(1)
+        self.assert_event_queued()
 
     def test_partial_disconnect(self):
         client = self.connect()
@@ -304,25 +305,38 @@ class ServerTests(BaseTest):
             lambda messages: any("Discarded incomplete message: size=10" in message for message in messages)
         ))
         self.connect().sendall(LINE)
-        self.wait_receipts(1)
+        self.assert_event_queued()
 
-    def test_processor_exception_continues(self):
-        completed = threading.Event()
-        calls = []
+    def test_listener_enqueues_without_calling_processor(self):
+        with patch("processor.process_resume_and_internship", side_effect=AssertionError("Unexpected processor call")) as handler:
+            self.connect().sendall(LINE)
+            self.assert_event_queued()
+            handler.assert_not_called()
 
-        def fail_once(resume, internship):
-            calls.append((resume, internship))
-            if len(calls) == 1:
-                raise RuntimeError("simulated processor failure")
-            processor.process_resume_and_internship(resume, internship)
-            completed.set()
+    def test_invalid_events_never_enter_queue(self):
+        invalid = json.dumps({"resume": EVENT["resume"]}).encode() + b"\n"
+        self.connect().sendall(invalid)
+        self.assertTrue(self.capture.wait_for(
+            lambda messages: any("internship must be a nonempty object" in message for message in messages)
+        ))
+        self.assertTrue(self.pending.empty())
 
-        with patch("tcp_listener.process_resume_and_internship", side_effect=fail_once):
-            self.connect().sendall(LINE + LINE)
-            self.assertTrue(completed.wait(3))
-            self.assertEqual(calls, [(EVENT["resume"], EVENT["internship"])] * 2)
-            self.wait_receipts(1)
-        self.assertTrue(any("RuntimeError: simulated processor failure" in m for m in self.capture.messages))
+    def test_full_queue_drops_then_recovers(self):
+        existing = [{"queued_id": number} for number in range(10)]
+        for event in existing:
+            self.pending.put_nowait(event)
+        client = self.connect()
+        client.sendall(LINE)
+        self.assertTrue(self.capture.wait_for(
+            lambda messages: any("Event dropped: queue_size=10" in message for message in messages)
+        ))
+        self.assertEqual(self.pending.qsize(), 10)
+        for expected in existing:
+            self.assertIs(self.pending.get_nowait(), expected)
+            self.pending.task_done()
+        self.assertTrue(self.pending.empty())
+        client.sendall(LINE)
+        self.assert_event_queued()
 
 
 if __name__ == "__main__":

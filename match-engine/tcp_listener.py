@@ -2,7 +2,7 @@ import json
 import socketserver
 
 from log_config import get_logger
-from processor import process_resume_and_internship
+from event_queue import enqueue
 
 
 logger = get_logger("tcp_listener")
@@ -85,14 +85,7 @@ class EventHandler(socketserver.BaseRequestHandler):
                 if not data:
                     break
                 for event in buffer.feed(data):
-                    try:
-                        process_resume_and_internship(
-                            event["resume"], event["internship"]
-                        )
-                    except Exception as error:
-                        logger.exception(
-                            "Processor failed: %s: %s", type(error).__name__, error
-                        )
+                    enqueue(self.server.event_queue, event)
         except MessageTooLargeError:
             logger.warning("Closing client connection: message exceeds size limit")
         except (ConnectionError, OSError) as error:
@@ -107,5 +100,7 @@ class EventServer(socketserver.ThreadingTCPServer):
     allow_reuse_address = True
 
 
-def create_server(host: str, port: int) -> socketserver.ThreadingTCPServer:
-    return EventServer((host, port), EventHandler)
+def create_server(host: str, port: int, event_queue) -> socketserver.ThreadingTCPServer:
+    server = EventServer((host, port), EventHandler)
+    server.event_queue = event_queue
+    return server
