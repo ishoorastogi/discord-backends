@@ -17,18 +17,37 @@ class MessageTooLargeError(Exception):
 
 
 def validate_event(event: dict) -> str | None:
+
+    if not isinstance(event, dict):
+        return "message must be a JSON object"
+
+    # New event-based message format
+    if "event" in event:
+
+        if not isinstance(event["event"], str) or not event["event"].strip():
+            return "event type must be a nonempty string"
+
+        return None
+
+    # Legacy resume + internship message format
     resume = event.get("resume")
     internship = event.get("internship")
+
     if not isinstance(resume, dict) or not resume:
         return "resume must be a nonempty object"
+
     if not isinstance(internship, dict) or not internship:
         return "internship must be a nonempty object"
+
     if "id" not in resume:
         return "resume id is required"
+
     if "text" not in resume or not isinstance(resume["text"], str):
         return "resume text must be a string"
+
     if "id" not in internship:
         return "internship id is required"
+
     return None
 
 
@@ -88,7 +107,41 @@ class EventHandler(socketserver.BaseRequestHandler):
                 if not data:
                     break
                 for event in buffer.feed(data):
-                    enqueue(self.server.event_queue, event)
+                    if event.get("event") == "PING":
+                        response = {
+                            "event": "PONG",
+                            "timestamp": event.get("timestamp")
+                        }
+                        self.request.sendall(
+                            (json.dumps(response) + "\n").encode("utf-8")
+                        )
+                        continue
+                    success = enqueue(
+                        self.server.event_queue,
+                        event
+                    )
+                    if event.get("event") == "RESUME_UPLOAD":
+                        response = {
+                            "event": (
+                                "UPLOAD_ACCEPTED"
+                                if success
+                                else "UPLOAD_REJECTED"
+                            ),
+                            "request_id": event.get("request_id"),
+                            "message": (
+                                "Resume successfully received by backend"
+                                if success
+                                else "Backend queue is full"
+                            )
+                        }
+                        self.request.sendall(
+                            (json.dumps(response) + "\n").encode("utf-8")
+                        )
+                    if not success:
+                        logger.warning(
+                            "Failed to enqueue event: %s",
+                            event.get("event")
+                        )
         except MessageTooLargeError:
             logger.warning("Closing client connection: message exceeds size limit")
         except (ConnectionError, OSError) as error:
@@ -96,7 +149,6 @@ class EventHandler(socketserver.BaseRequestHandler):
         finally:
             buffer.close()
             logger.info("Client disconnected: %s", self.client_address)
-
 
 class EventServer(socketserver.ThreadingTCPServer):
     daemon_threads = True

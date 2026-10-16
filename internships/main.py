@@ -26,6 +26,7 @@ def main() -> None:
     # Import application modules only after logging is configured.
     from event_queue import create_queue, HandlerRegistry, Worker, drain, stop_workers
     from processor import process_resume_and_internship
+    from event_router import EventRouter
     from tcp_listener import create_server, close_clients
 
     try:
@@ -40,11 +41,54 @@ def main() -> None:
     shutdown_timeout = settings.shutdown_timeout
 
     event_queue = create_queue(max_size)
+    router = EventRouter()
+        # Initialize event queue, handler registry, and event router
+    event_queue = create_queue(max_size)
     registry = HandlerRegistry()
+    router = EventRouter()
 
+    # Handle resume uploads
+    def handle_resume_upload(event: dict) -> None:
+
+        data = event.get("data")
+
+        if not isinstance(data, dict):
+            logger.warning("Invalid resume upload payload")
+            return
+
+        discord_id = data.get("discord_id")
+
+        if not isinstance(discord_id, str) or not discord_id.isdigit():
+            logger.warning("Invalid Discord ID in resume upload")
+            return
+
+        logger.info(
+            "Resume upload received: discord_id=%s",
+            discord_id
+        )
+
+        # TODO: Forward event to resume processing pipeline
+
+    # Handle existing resume/internship events
+    def handle_legacy_event(event: dict) -> None:
+
+        process_resume_and_internship(
+            event["resume"],
+            event["internship"]
+        )
+
+    # Register supported event types
+    router.register("RESUME_UPLOAD", handle_resume_upload)
+
+    # Route incoming events
     def process_event(event: dict) -> None:
-        process_resume_and_internship(event["resume"], event["internship"])
 
+        if "event" in event:
+            router.route(event)
+        else:
+            handle_legacy_event(event)
+
+    # Register the router with the event queue worker
     registry.register(process_event)
     worker = Worker(event_queue, registry)
     server = None
