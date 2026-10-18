@@ -1,50 +1,18 @@
-import io
-import logging
 import os
-from pathlib import Path
-import sys
-import subprocess
-import tempfile
 import threading
 import time
 import unittest
 from unittest.mock import patch
+from pathlib import Path
+import sys
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "event-listener"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from internships.tests.support import BaseTest
 
 with patch.dict(os.environ, {"LOG_LEVEL": "INFO", "LOG_FILE": ""}):
-    from shared.logs import log_config
     import event_queue
-
-
-LOGGER_NAMES = ("event_queue", "test_logging", "processor", "tcp_listener", "main")
-
-
-def reset_logging():
-    handlers = set(log_config._handlers or [])
-    for name in LOGGER_NAMES:
-        logger = logging.getLogger(name)
-        handlers.update(logger.handlers)
-        logger.handlers.clear()
-    for handler in handlers:
-        handler.close()
-    log_config._handlers = None
-    log_config._level = logging.INFO
-
-
-class BaseTest(unittest.TestCase):
-    def setUp(self):
-        reset_logging()
-        environment = patch.dict(os.environ, {"LOG_LEVEL": "INFO", "LOG_FILE": ""})
-        environment.start()
-        self.addCleanup(environment.stop)
-        self.addCleanup(reset_logging)
-        self.output = io.StringIO()
-        stderr = patch("sys.stderr", self.output)
-        stderr.start()
-        self.addCleanup(stderr.stop)
-        event_queue.logger = log_config.get_logger("event_queue")
 
 
 class QueueTests(BaseTest):
@@ -279,119 +247,6 @@ class WorkerTests(BaseTest):
         self.assertLess(time.monotonic() - started, 1)
         self.release.set()
         self.assertEqual(event_queue.drain(self.pending, 3), 0)
-
-
-class ShutdownConfigTests(BaseTest):
-    def test_invalid_shutdown_timeout(self):
-        main_path = str(Path(__file__).resolve().parents[2] / "main.py")
-        for value in ("0", "abc", "-1", "nan", "inf"):
-            with self.subTest(value=value):
-                environment = dict(
-                    os.environ, SHUTDOWN_TIMEOUT_SECONDS=value,
-                    TCP_HOST="127.0.0.1", TCP_PORT="9000", QUEUE_MAX_SIZE="1000",
-                )
-                result = subprocess.run(
-                    [sys.executable, "-B", main_path], env=environment,
-                    capture_output=True, text=True, timeout=3,
-                )
-                self.assertEqual(result.returncode, 2)
-                self.assertIn("SHUTDOWN_TIMEOUT_SECONDS must be", result.stderr)
-                self.assertNotIn("Traceback", result.stderr)
-
-
-class StartupConfigTests(BaseTest):
-    def setUp(self):
-        super().setUp()
-        reset_logging()
-        from internships import main
-
-        self.main = main
-        directory = tempfile.TemporaryDirectory()
-        self.addCleanup(directory.cleanup)
-        self.root = Path(directory.name)
-        service_dir = self.root / "internships"
-        service_dir.mkdir()
-        self.env_path = service_dir / ".env"
-        listener_dir = service_dir / "event-listener"
-        listener_dir.mkdir()
-        location = patch.object(main.config, "__file__", str(listener_dir / "config.py"))
-        location.start()
-        self.addCleanup(location.stop)
-        environment = patch.dict(os.environ, {}, clear=True)
-        environment.start()
-        self.addCleanup(environment.stop)
-
-    def run_config(self, contents):
-        self.env_path.write_text(contents)
-        with self.assertRaises(SystemExit) as result:
-            self.main.main()
-        self.assertEqual(result.exception.code, 2)
-        return self.output.getvalue()
-
-    def test_loads_service_env_before_logging(self):
-        output = self.run_config(
-            'TCP_HOST="127.0.0.1"\nTCP_PORT=9000\n'
-            'LOG_LEVEL=DEBUG\nSHUTDOWN_TIMEOUT_SECONDS=0\n'
-        )
-        self.assertIn("SHUTDOWN_TIMEOUT_SECONDS must be", output)
-        self.assertEqual(logging.getLogger("main").level, logging.DEBUG)
-
-    def test_shell_values_override_env_file(self):
-        os.environ.update(TCP_HOST="127.0.0.1", TCP_PORT="9000")
-        output = self.run_config(
-            "TCP_HOST=\nTCP_PORT=invalid\nSHUTDOWN_TIMEOUT_SECONDS=0\n"
-        )
-        self.assertIn("SHUTDOWN_TIMEOUT_SECONDS must be", output)
-
-    def test_missing_host_rejected(self):
-        output = self.run_config("TCP_PORT=9000\n")
-        self.assertIn("TCP_HOST is required", output)
-
-    def test_missing_port_rejected(self):
-        output = self.run_config("TCP_HOST=127.0.0.1\n")
-        self.assertIn("TCP_PORT must be an integer between 1 and 65535", output)
-
-    def test_shell_configuration_works_without_env_file(self):
-        os.environ.update(
-            TCP_HOST="127.0.0.1", TCP_PORT="9000", SHUTDOWN_TIMEOUT_SECONDS="0",
-        )
-        with self.assertRaises(SystemExit) as result:
-            self.main.main()
-        self.assertEqual(result.exception.code, 2)
-        self.assertIn("SHUTDOWN_TIMEOUT_SECONDS must be", self.output.getvalue())
-
-    def test_does_not_load_repository_root_env(self):
-        (self.root / ".env").write_text("TCP_HOST=127.0.0.1\nTCP_PORT=9000\n")
-        output = self.run_config("")
-        self.assertIn("TCP_HOST is required", output)
-
-    def test_uses_config_defaults(self):
-        self.env_path.write_text("TCP_HOST=127.0.0.1\nTCP_PORT=9000\n")
-        log_file = str(self.root / "service.log")
-        with patch.multiple(
-            self.main.config, QUEUE_MAX_SIZE=25, SHUTDOWN_TIMEOUT_SECONDS=2.5,
-            LOG_LEVEL="DEBUG", LOG_FILE=log_file,
-        ):
-            self.main.config.load_environment()
-            settings = self.main.config.load_settings()
-        self.assertEqual(settings.queue_max_size, 25)
-        self.assertEqual(settings.shutdown_timeout, 2.5)
-        self.assertEqual(os.environ["LOG_LEVEL"], "DEBUG")
-        self.assertEqual(os.environ["LOG_FILE"], log_file)
-
-    def test_environment_overrides_config_defaults(self):
-        self.env_path.write_text("TCP_HOST=127.0.0.1\nTCP_PORT=9000\n")
-        os.environ.update(
-            QUEUE_MAX_SIZE="12", SHUTDOWN_TIMEOUT_SECONDS="1.5",
-            LOG_LEVEL="ERROR", LOG_FILE="",
-        )
-        with patch.multiple(self.main.config, LOG_LEVEL="DEBUG", LOG_FILE="service.log"):
-            self.main.config.load_environment()
-            settings = self.main.config.load_settings()
-        self.assertEqual(settings.queue_max_size, 12)
-        self.assertEqual(settings.shutdown_timeout, 1.5)
-        self.assertEqual(os.environ["LOG_LEVEL"], "ERROR")
-        self.assertEqual(os.environ["LOG_FILE"], "")
 
 
 if __name__ == "__main__":

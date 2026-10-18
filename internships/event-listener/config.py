@@ -1,6 +1,7 @@
-"""Event listener settings; private connection values belong in internships/.env."""
+"""Event listener settings; TCP connection values belong in internships/config.json."""
 
 from dataclasses import dataclass
+import json
 import math
 import os
 from pathlib import Path
@@ -36,16 +37,23 @@ def load_environment() -> None:
 
 def load_settings() -> Settings:
     """Validate connection values and resolve optional configuration overrides."""
-    host = os.environ.get("TCP_HOST", "").strip()
-    if not host:
-        raise ValueError("TCP_HOST is required; set it in internships/.env or the environment")
-
+    config_path = Path(__file__).resolve().parent.parent / "config.json"
     try:
-        port = int(os.environ.get("TCP_PORT", ""))
-        if not 1 <= port <= 65535:
-            raise ValueError
-    except ValueError:
-        raise ValueError("TCP_PORT must be an integer between 1 and 65535") from None
+        with config_path.open(encoding="utf-8") as config_file:
+            connection = json.load(config_file)
+    except (OSError, ValueError) as error:
+        raise ValueError(f"Cannot load internships/config.json: {error}") from None
+    if not isinstance(connection, dict):
+        raise ValueError("internships/config.json must contain a JSON object")
+
+    host = connection.get("TCP_HOST")
+    if not isinstance(host, str) or not host.strip():
+        raise ValueError("TCP_HOST must be a nonempty string in internships/config.json")
+    host = host.strip()
+
+    port = connection.get("TCP_PORT")
+    if type(port) is not int or not 1 <= port <= 65535:
+        raise ValueError("TCP_PORT must be an integer between 1 and 65535 in internships/config.json")
 
     try:
         max_size = int(os.environ.get("QUEUE_MAX_SIZE", str(QUEUE_MAX_SIZE)))

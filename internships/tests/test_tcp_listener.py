@@ -9,8 +9,10 @@ import threading
 import unittest
 from unittest.mock import patch
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "event-listener"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from internships.tests.support import reset_logging
 
 # Keep import-time logging independent of the caller's environment.
 with patch.dict(os.environ, {"LOG_LEVEL": "INFO", "LOG_FILE": ""}):
@@ -25,21 +27,6 @@ EVENT = {
     "internship": {"id": "i1", "description": "PRIVATE_INTERNSHIP_TEXT"},
 }
 LINE = json.dumps(EVENT).encode("utf-8") + b"\n"
-LOGGER_NAMES = ("test_logging", "processor", "tcp_listener", "event_queue")
-
-
-def reset_logging():
-    handlers = set(log_config._handlers or [])
-    for name in LOGGER_NAMES:
-        logger = logging.getLogger(name)
-        handlers.update(logger.handlers)
-        logger.handlers.clear()
-    for handler in handlers:
-        handler.close()
-    log_config._handlers = None
-    log_config._level = logging.INFO
-
-
 class Capture(logging.Handler):
     def __init__(self):
         super().__init__()
@@ -77,6 +64,24 @@ class BaseTest(unittest.TestCase):
 class ValidationTests(BaseTest):
     def test_valid_event(self):
         self.assertIsNone(tcp_listener.validate_event(EVENT))
+
+    def test_event_messages_need_only_a_nonempty_event_type(self):
+        for event_type in ("PING", "RESUME_UPLOAD", "UNKNOWN"):
+            with self.subTest(event_type=event_type):
+                self.assertIsNone(tcp_listener.validate_event({"event": event_type}))
+
+    def test_invalid_event_types_rejected(self):
+        for event_type in (None, "", "  ", 123, [], {}):
+            with self.subTest(event_type=event_type):
+                self.assertEqual(
+                    tcp_listener.validate_event({"event": event_type}),
+                    "event type must be a nonempty string",
+                )
+
+    def test_non_object_events_rejected(self):
+        for event in (None, [], "event", 1):
+            with self.subTest(event=event):
+                self.assertEqual(tcp_listener.validate_event(event), "message must be a JSON object")
 
     def test_required_fields(self):
         for field in ("resume_missing", "resume_empty", "resume_invalid",
@@ -119,6 +124,32 @@ class BufferTests(BaseTest):
 
     def test_two_lines(self):
         self.assertEqual(tcp_listener.MessageBuffer().feed(LINE + LINE), [EVENT, EVENT])
+
+    def test_unicode_and_escaped_newlines_survive_split_bytes(self):
+        event = {"event": "RESUME_UPLOAD", "data": {"text": "Résumé\n中文"}}
+        line = json.dumps(event, ensure_ascii=False).encode("utf-8") + b"\n"
+        buffer = tcp_listener.MessageBuffer()
+        received = []
+        for byte in line:
+            received.extend(buffer.feed(bytes([byte])))
+        self.assertEqual(received, [event])
+
+    def test_completed_lines_preserve_partial_next_message(self):
+        buffer = tcp_listener.MessageBuffer()
+        self.assertEqual(buffer.feed(LINE + LINE[:10]), [EVENT])
+        self.assertEqual(buffer.feed(LINE[10:]), [EVENT])
+
+    def test_exact_size_limit_is_accepted_excluding_newline(self):
+        with patch.object(tcp_listener, "MAX_MESSAGE_BYTES", len(LINE) - 1):
+            buffer = tcp_listener.MessageBuffer()
+            self.assertEqual(buffer.feed(LINE[:-1]), [])
+            self.assertEqual(buffer.feed(b"\n"), [EVENT])
+
+    def test_deeply_nested_json_is_discarded_then_recovers(self):
+        nested = b"[" * 2000 + b"0" + b"]" * 2000 + b"\n"
+        self.assertEqual(tcp_listener.MessageBuffer().feed(nested + LINE), [EVENT])
+        self.assertEqual(len(self.capture.messages), 1)
+        self.assertTrue(self.capture.messages[0].startswith("Discarded message:"))
 
     def test_empty_lines(self):
         self.assertEqual(tcp_listener.MessageBuffer().feed(b"\n\n" + LINE), [EVENT])
@@ -191,6 +222,57 @@ class ServerTests(BaseTest):
         client = socket.create_connection(self.server.server_address, timeout=3)
         self.clients.append(client)
         return client
+
+    def read_response(self, client):
+        response = bytearray()
+        while not response.endswith(b"\n"):
+            chunk = client.recv(1)
+            self.assertTrue(chunk, "connection closed before a complete response")
+            response.extend(chunk)
+        return json.loads(response)
+
+    def test_ping_replies_without_using_full_queue(self):
+        for number in range(10):
+            self.pending.put_nowait({"queued_id": number})
+        client = self.connect()
+        client.sendall(b'{"event":"PING","timestamp":12345}\n')
+        self.assertEqual(self.read_response(client), {"event": "PONG", "timestamp": 12345})
+        self.assertEqual(self.pending.qsize(), 10)
+        self.assertFalse(any("Event dropped" in message for message in self.capture.messages))
+
+    def test_resume_upload_acknowledges_and_queues_original_event(self):
+        event = {
+            "event": "RESUME_UPLOAD", "request_id": "upload-1",
+            "data": {"discord_id": "12345", "text": "PRIVATE_RESUME_TEXT"},
+        }
+        client = self.connect()
+        client.sendall(json.dumps(event).encode() + b"\n")
+        self.assertEqual(self.read_response(client), {
+            "event": "UPLOAD_ACCEPTED", "request_id": "upload-1",
+            "message": "Resume successfully received by backend",
+        })
+        self.assertEqual(self.pending.get(timeout=3), event)
+        self.pending.task_done()
+        self.assertTrue(self.pending.empty())
+
+    def test_resume_upload_rejected_when_full_then_accepted(self):
+        for number in range(10):
+            self.pending.put_nowait({"queued_id": number})
+        event = {"event": "RESUME_UPLOAD", "request_id": "upload-2", "data": {"discord_id": "123"}}
+        line = json.dumps(event).encode() + b"\n"
+        client = self.connect()
+        client.sendall(line)
+        self.assertEqual(self.read_response(client), {
+            "event": "UPLOAD_REJECTED", "request_id": "upload-2",
+            "message": "Backend queue is full",
+        })
+        for number in range(10):
+            self.assertEqual(self.pending.get_nowait(), {"queued_id": number})
+            self.pending.task_done()
+        client.sendall(line)
+        self.assertEqual(self.read_response(client)["event"], "UPLOAD_ACCEPTED")
+        self.assertEqual(self.pending.get(timeout=3), event)
+        self.pending.task_done()
 
     def assert_event_queued(self):
         self.assertEqual(self.pending.get(timeout=3), EVENT)
