@@ -5,24 +5,15 @@ the result as a Python object.
 
 ## Setup
 
-From this directory, create and activate a virtual environment, then install
-the package and its test dependencies:
-
-```bash
-python -m venv .venv
-```
-
-On Windows:
-
-```powershell
-.venv\Scripts\Activate.ps1
-```
-
-Install the package:
+From this directory, install the package and its test dependencies into your
+current Python installation:
 
 ```powershell
 python -m pip install -r requirements.txt
 ```
+
+This installs dependencies into the selected Python installation, shared with
+other projects using that installation.
 
 ## Usage
 
@@ -57,6 +48,18 @@ print(resume.raw_text)
 The initial scaffold extracts PDF text and stores it in a `Resume` object.
 Extracting structured fields such as work experience and education can be
 implemented in `parser.py`.
+
+PDF text extraction and `Resume` object creation are separate steps. To create
+a `Resume` directly from text that has already been extracted:
+
+```python
+from resume_parser import ResumeFactory
+
+resume = ResumeFactory().create_resume("Extracted resume text")
+```
+
+`ResumeFactory` handles creating the model from text; `parse_resume_pdf`
+continues to coordinate PDF extraction and model creation.
 
 Run tests with:
 

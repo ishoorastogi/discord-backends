@@ -10,7 +10,8 @@ def test_extract_pdf_text_uses_layout_mode(monkeypatch):
             return "PyTorch"
 
     class FakeReader:
-        def __init__(self, _pdf_path):
+        def __init__(self, pdf_path):
+            assert pdf_path == Path("sample.pdf")
             self.pages = [FakePage()]
 
     monkeypatch.setattr(pdf_reader, "PdfReader", FakeReader)
