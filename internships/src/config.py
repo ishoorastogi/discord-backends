@@ -1,4 +1,4 @@
-"""Event listener settings; TCP connection values belong in internships/config.json."""
+"""Backend settings; TCP connection values belong in internships/src/config.json."""
 
 from dataclasses import dataclass
 import json
@@ -28,8 +28,8 @@ class Settings:
 
 
 def load_environment() -> None:
-    """Load internships/.env for the listener, preserving environment variables."""
-    load_dotenv(Path(__file__).resolve().parent.parent / ".env", override=False)
+    """Load internships/src/.env, preserving shell environment variables."""
+    load_dotenv(Path(__file__).resolve().parent / ".env", override=False)
     os.environ.setdefault("LOG_LEVEL", LOG_LEVEL)
     if LOG_FILE is not None:
         os.environ.setdefault("LOG_FILE", str(LOG_FILE))
@@ -37,23 +37,23 @@ def load_environment() -> None:
 
 def load_settings() -> Settings:
     """Validate connection values and resolve optional configuration overrides."""
-    config_path = Path(__file__).resolve().parent.parent / "config.json"
+    config_path = Path(__file__).resolve().parent / "config.json"
     try:
         with config_path.open(encoding="utf-8") as config_file:
             connection = json.load(config_file)
     except (OSError, ValueError) as error:
-        raise ValueError(f"Cannot load internships/config.json: {error}") from None
+        raise ValueError(f"Cannot load internships/src/config.json: {error}") from None
     if not isinstance(connection, dict):
-        raise ValueError("internships/config.json must contain a JSON object")
+        raise ValueError("internships/src/config.json must contain a JSON object")
 
     host = connection.get("TCP_HOST")
     if not isinstance(host, str) or not host.strip():
-        raise ValueError("TCP_HOST must be a nonempty string in internships/config.json")
+        raise ValueError("TCP_HOST must be a nonempty string in internships/src/config.json")
     host = host.strip()
 
     port = connection.get("TCP_PORT")
     if type(port) is not int or not 1 <= port <= 65535:
-        raise ValueError("TCP_PORT must be an integer between 1 and 65535 in internships/config.json")
+        raise ValueError("TCP_PORT must be an integer between 1 and 65535 in internships/src/config.json")
 
     try:
         max_size = int(os.environ.get("QUEUE_MAX_SIZE", str(QUEUE_MAX_SIZE)))

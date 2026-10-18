@@ -14,7 +14,7 @@ from unittest.mock import Mock, patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "event-listener"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
-from internships import main
+from internships.src import main
 from support import BaseTest
 
 with patch.dict(os.environ, {"LOG_LEVEL": "INFO", "LOG_FILE": ""}):
@@ -157,15 +157,17 @@ class EntryPointTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             copied_service = root / "internships"
-            copied_service.mkdir()
-            shutil.copy2(service / "main.py", copied_service / "main.py")
+            copied_src = copied_service / "src"
+            copied_src.mkdir(parents=True)
+            for filename in ("main.py", "config.py", "__init__.py"):
+                shutil.copy2(service / "src" / filename, copied_src / filename)
             shutil.copytree(service / "event-listener", copied_service / "event-listener")
             shutil.copytree(service.parent / "shared", root / "shared")
-            (copied_service / "config.json").write_text(json.dumps({"TCP_HOST": "127.0.0.1", "TCP_PORT": 12345}))
+            (copied_src / "config.json").write_text(json.dumps({"TCP_HOST": "127.0.0.1", "TCP_PORT": 12345}))
             unrelated = root / "unrelated"
             unrelated.mkdir()
             result = subprocess.run(
-                [sys.executable, "-B", str(copied_service / "main.py")], cwd=unrelated,
+                [sys.executable, "-B", str(copied_src / "main.py")], cwd=unrelated,
                 env={"QUEUE_MAX_SIZE": "0", "LOG_LEVEL": "INFO", "LOG_FILE": ""},
                 capture_output=True, text=True, timeout=5,
             )

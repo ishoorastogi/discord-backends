@@ -5,7 +5,7 @@ from pathlib import Path
 from pypdf import PdfReader
 from pypdf.errors import PdfReadError as PypdfReadError
 
-from resume_parser.exceptions import PdfReadError
+from exceptions import PdfReadError
 
 
 def extract_pdf_text(pdf_path: Path) -> str:

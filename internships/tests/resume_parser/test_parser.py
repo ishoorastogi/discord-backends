@@ -1,7 +1,8 @@
 import pytest
 
-from resume_parser import Resume, parse_resume_text
-from resume_parser.exceptions import EmptyResumeTextError
+from exceptions import EmptyResumeTextError
+from models import Resume
+from parser import parse_resume_text
 
 
 def test_parse_resume_text_returns_resume_object():

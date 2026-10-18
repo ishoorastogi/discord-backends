@@ -1,16 +1,18 @@
-"""Parse a resume PDF and print its structured data as JSON."""
+"""Parse a resume PDF and print its raw text."""
 
 import argparse
-import json
 import sys
 from pathlib import Path
 
-from resume_parser import ResumeData, ResumeExtractor, parse_resume_pdf
-from resume_parser.exceptions import PdfReadError
+# Resolve the sibling parser modules when running this script directly.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "resume-parser"))
+
+from exceptions import PdfReadError
+from parser import parse_resume_pdf
 
 
 DEFAULT_PDF = (
-    Path(__file__).resolve().parents[2]
+    Path(__file__).resolve().parents[1]
     / "data"
     / "uploads"
     / "swe_resume_template.pdf"
@@ -18,7 +20,7 @@ DEFAULT_PDF = (
 
 if __name__ == "__main__":
     argument_parser = argparse.ArgumentParser(
-        description="Extract structured data from a resume PDF."
+        description="Parse a resume PDF and print its raw text."
     )
     argument_parser.add_argument(
         "pdf_path",
@@ -34,16 +36,9 @@ if __name__ == "__main__":
 
     try:
         resume = parse_resume_pdf(args.pdf_path)
-        resume = ResumeExtractor.extract(resume, resume.raw_text)
     except PdfReadError as exc:
         print(f"Could not parse PDF: {exc}", file=sys.stderr)
         raise SystemExit(1) from exc
 
     sys.stdout.reconfigure(errors="replace")
-    data = ResumeData(
-        education=resume.education,
-        projects=resume.projects,
-        skills=resume.skills,
-        experience=resume.experience,
-    )
-    print(json.dumps(data.to_dict(), indent=2))
+    print(resume.raw_text)

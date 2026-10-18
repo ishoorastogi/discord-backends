@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from resume_parser import pdf_reader
+import pdf_reader
 
 
 def test_extract_pdf_text_uses_layout_mode(monkeypatch):

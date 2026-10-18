@@ -5,12 +5,11 @@ from __future__ import annotations
 import re
 from datetime import date
 
-from resume_parser.exceptions import EmptyResumeTextError
-from resume_parser.models import (
+from .exceptions import EmptyResumeTextError
+from .models import (
     Education,
     Experience,
     Project,
-    Resume,
     ResumeData,
     Skills,
 )
@@ -352,7 +351,10 @@ def extract_projects(lines: list[str], known_skills: list[str]) -> list[Project]
 
 def extract_resume_data(raw_text: str) -> ResumeData:
     """Turn the resume's raw text into structured data."""
-    sections = _split_sections(raw_text)
+    text = raw_text.strip()
+    if not text:
+        raise EmptyResumeTextError("Resume text cannot be empty.")
+    sections = _split_sections(text)
     skills = extract_skills(sections.get("skills", []))
     return ResumeData(
         education=extract_education(sections.get("education", [])),
@@ -363,21 +365,9 @@ def extract_resume_data(raw_text: str) -> ResumeData:
 
 
 class ResumeExtractor:
-    """Populate an existing Resume instance from resume text."""
+    """Extract structured fields from resume text."""
 
     @staticmethod
-    def extract(resume: Resume, raw_text: str) -> Resume:
-        """Fill and return the provided resume object."""
-        if not isinstance(resume, Resume):
-            raise TypeError("resume must be a Resume instance.")
-
-        text = raw_text.strip()
-        if not text:
-            raise EmptyResumeTextError("Resume text cannot be empty.")
-        data = extract_resume_data(text)
-        resume.raw_text = text
-        resume.education = data.education
-        resume.projects = data.projects
-        resume.skills = data.skills
-        resume.experience = data.experience
-        return resume
+    def extract(raw_text: str) -> ResumeData:
+        """Return extracted data without modifying a parser object."""
+        return extract_resume_data(raw_text)

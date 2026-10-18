@@ -1,7 +1,10 @@
-from resume_parser import (
+import pytest
+
+from extraction import (
+    EmptyResumeTextError,
+    ResumeData,
     ResumeExtractor,
     extract_resume_data,
-    parse_resume_text,
 )
 
 
@@ -25,8 +28,7 @@ Software Engineer | Example Co | Jan 2022 - Dec 2023
 Data Intern | Sample Co | Jun 2021 - Aug 2021
 """
 
-    resume = parse_resume_text(raw_text)
-    data = extract_resume_data(resume.raw_text)
+    data = extract_resume_data(raw_text)
 
     assert len(data.education) == 1
     assert data.education[0].school == "University of Example"
@@ -59,7 +61,7 @@ Data Intern | Sample Co | Jun 2021 - Aug 2021
     ]
 
 
-def test_resume_extractor_populates_and_returns_the_provided_resume():
+def test_resume_extractor_returns_structured_data():
     raw_text = """\
 EDUCATION
 University of Example | B.S. Computer Science | May 2024
@@ -67,11 +69,14 @@ University of Example | B.S. Computer Science | May 2024
 SKILLS
 Programming Languages: Python
 """
-    resume = parse_resume_text("old resume text")
+    data = ResumeExtractor.extract(raw_text)
 
-    result = ResumeExtractor.extract(resume, raw_text)
+    assert isinstance(data, ResumeData)
+    assert data.education[0].school == "University of Example"
+    assert data.skills.languages == ["Python"]
 
-    assert result is resume
-    assert resume.raw_text == raw_text.strip()
-    assert resume.education[0].school == "University of Example"
-    assert resume.skills.languages == ["Python"]
+
+@pytest.mark.parametrize("extract", [extract_resume_data, ResumeExtractor.extract])
+def test_extraction_rejects_empty_text(extract):
+    with pytest.raises(EmptyResumeTextError):
+        extract(" \n ")

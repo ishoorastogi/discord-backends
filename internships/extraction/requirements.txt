@@ -1,0 +1,2 @@
+# Install this package and its development dependencies from this directory.
+-e .[dev]

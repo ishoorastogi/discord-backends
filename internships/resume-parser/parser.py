@@ -2,9 +2,9 @@
 
 from pathlib import Path
 
-from resume_parser.exceptions import EmptyResumeTextError
-from resume_parser.models import Resume
-from resume_parser.pdf_reader import extract_pdf_text
+from exceptions import EmptyResumeTextError
+from models import Resume
+from pdf_reader import extract_pdf_text
 
 
 def parse_resume_text(text: str) -> Resume:

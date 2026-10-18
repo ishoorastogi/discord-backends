@@ -1,4 +1,4 @@
-"""Data models used by the resume parser."""
+"""Structured fields extracted from resume text."""
 
 from dataclasses import asdict, dataclass, field
 
@@ -45,12 +45,3 @@ class ResumeData:
 
     def to_dict(self) -> dict:
         return asdict(self)
-
-
-@dataclass
-class Resume:
-    raw_text: str
-    education: list[Education] = field(default_factory=list)
-    projects: list[Project] = field(default_factory=list)
-    skills: Skills = field(default_factory=Skills)
-    experience: list[Experience] = field(default_factory=list)
