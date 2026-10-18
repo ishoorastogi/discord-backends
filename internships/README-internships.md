@@ -8,8 +8,13 @@ dependencies and run its tests with:
 cd internships/resume-parser
 python -m pip install -r requirements.txt
 python -m pytest
+```
+
+Parser tests live in `tests/resume_parser/`. Shared resume data lives in
+`data/`; uploaded PDFs in `data/uploads/` are Git-ignored.
+
 `main.py` coordinates the backend. Its queue, processor, and TCP listener modules
-live in `event-listener/`; service tests live in `tests/`. The entry point and
+live in `event-listener/`; service tests live in `tests/event-listener/`. The entry point and
 tests add `event-listener/` to Python's import path so these modules can be
 imported by name.
 
@@ -46,13 +51,19 @@ take precedence over these defaults. Host and port come only from `config.json`.
 Run the service tests from the repository root:
 
 ```sh
-python3 -B -m unittest discover -s internships/tests -p "test_*.py" -v
+python3 -B -m unittest discover -s internships/tests/event-listener -p "test_*.py" -v
 ```
 
 The suite covers connection configuration, queues and workers, TCP message framing,
 PING/PONG replies, upload acknowledgments, event routing, and startup/shutdown.
 Configuration tests use temporary files rather than the service's local settings.
 TCP integration tests bind to loopback on automatically assigned ports.
+
+Run all internship tests, including the resume parser, from the repository root:
+
+```sh
+python3 -m pytest internships/tests
+```
 
 Shared logging tests remain in `shared/logs/`:
 

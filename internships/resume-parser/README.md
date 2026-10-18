@@ -38,7 +38,8 @@ environment to update its editable installation to the new location.
 ## Usage
 
 After installing the package as described above, run the sample script from
-this directory. It uses `data/uploads/test_resume_1.pdf` by default:
+this directory. It uses `../data/uploads/swe_resume_template.pdf` by default
+(relative to this directory). Supply your own PDF if that local file is absent:
 
 ```powershell
 python scripts/parse_resume.py
@@ -47,10 +48,10 @@ python scripts/parse_resume.py
 To parse a different PDF, pass its path:
 
 ```powershell
-python scripts/parse_resume.py "data/uploads/another-resume.pdf"
+python scripts/parse_resume.py "../data/uploads/another-resume.pdf"
 ```
 
-The script prints the extracted text to the terminal. Resume data may contain
+The script prints structured resume data as JSON. Resume data may contain
 sensitive information, so avoid sharing terminal output or committing real
 resumes.
 
@@ -61,7 +62,7 @@ from pathlib import Path
 
 from resume_parser import parse_resume_pdf
 
-resume = parse_resume_pdf(Path("data/uploads/test_resume_1.pdf"))
+resume = parse_resume_pdf(Path("../data/uploads/another-resume.pdf"))
 print(resume.raw_text)
 ```
 
@@ -69,10 +70,10 @@ The initial scaffold extracts PDF text and stores it in a `Resume` object.
 Extracting structured fields such as work experience and education can be
 implemented in `parser.py`.
 
-Run tests with:
+Parser tests live in `../tests/resume_parser/`. Run them from this directory with:
 
 ```bash
-pytest
+python -m pytest
 ```
 
 Do not commit uploaded resumes or real resumes used for testing; they contain

@@ -10,10 +10,10 @@ from resume_parser.exceptions import PdfReadError
 
 
 DEFAULT_PDF = (
-    Path(__file__).resolve().parents[1]
+    Path(__file__).resolve().parents[2]
     / "data"
     / "uploads"
-    / "SWE_Resume_Template.pdf"
+    / "swe_resume_template.pdf"
 )
 
 if __name__ == "__main__":

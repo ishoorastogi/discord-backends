@@ -11,11 +11,11 @@ import threading
 import unittest
 from unittest.mock import Mock, patch
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "event-listener"))
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "event-listener"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 from internships import main
-from internships.tests.support import BaseTest
+from support import BaseTest
 
 with patch.dict(os.environ, {"LOG_LEVEL": "INFO", "LOG_FILE": ""}):
     import processor
@@ -153,7 +153,7 @@ class MainTests(BaseTest):
 
 class EntryPointTests(unittest.TestCase):
     def test_cli_runs_from_unrelated_directory_with_isolated_config(self):
-        service = Path(__file__).resolve().parents[1]
+        service = Path(__file__).resolve().parents[2]
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             copied_service = root / "internships"

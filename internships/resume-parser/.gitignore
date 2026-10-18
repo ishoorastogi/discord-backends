@@ -5,9 +5,3 @@ __pycache__/
 build/
 dist/
 *.egg-info/
-
-data/uploads/*
-!data/uploads/.gitkeep
-
-tests/fixtures/*
-!tests/fixtures/.gitkeep
