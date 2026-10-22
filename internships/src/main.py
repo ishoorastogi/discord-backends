@@ -68,7 +68,9 @@ def main() -> None:
 
     # Register the router with the event queue worker
     registry.register(partial(intake_handler.process_event, router=router))
-    worker = event_queue.Worker(intake_queue, registry)
+    intake_worker = event_queue.Worker(intake_queue, registry)
+    resume_worker = event_queue.Worker(resume_queue, registry)
+
     server = None
     stopping = threading.Event()
 
@@ -81,7 +83,9 @@ def main() -> None:
 
     signal.signal(signal.SIGTERM, request_shutdown)
     signal.signal(signal.SIGINT, request_shutdown)
-    worker.start()
+    intake_worker.start()
+    resume_worker.start()
+
     try:
         for attempt in range(1, listener_config.BIND_ATTEMPTS + 1):
             if stopping.is_set():
@@ -117,8 +121,10 @@ def main() -> None:
         try:
             clients_alive = tcp_listener.close_clients(server, remaining_time()) if server else 0
             undelivered = event_queue.drain(intake_queue, remaining_time())
+            undelivered += event_queue.drain(resume_queue, remaining_time())
             logger.info("drain completed: remaining=%s", undelivered)
-            workers_alive = event_queue.stop_workers(intake_queue, [worker], remaining_time())
+            workers_alive = event_queue.stop_workers(intake_queue, [intake_worker], remaining_time(), "intake queue")
+            workers_alive += event_queue.stop_workers(resume_queue, [resume_worker], remaining_time(), "resume queue")
             if undelivered or workers_alive or clients_alive:
                 logger.warning(
                     "Shutdown timed out: undelivered=%s workers_alive=%s clients_alive=%s",
