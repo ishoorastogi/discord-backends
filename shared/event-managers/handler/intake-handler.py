@@ -20,6 +20,7 @@ def handle_resume_upload(event: dict, *, resume_queue) -> None:
 
     logger.info("Resume upload received: discord_id=%s", discord_id)
     enqueue(resume_queue, {**event, "event": "PARSE"})
+    return
 
 
 def handle_legacy_event(event: dict) -> None:
