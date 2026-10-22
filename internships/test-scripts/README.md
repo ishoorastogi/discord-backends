@@ -18,7 +18,7 @@ python3 internships/test-scripts/parse_resume.py /path/to/resume.pdf
 ```
 
 Without a PDF argument, the script uses
-`internships/data/uploads/swe_resume_template.pdf`. The script resolves its
+`internships/data/uploads/SWE_Resume_Template.pdf`. The script resolves its
 parser imports and default PDF relative to its own location, so it can run from
 any working directory. Explicit relative PDF paths use the working directory.
 

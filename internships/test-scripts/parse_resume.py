@@ -15,7 +15,7 @@ DEFAULT_PDF = (
     Path(__file__).resolve().parents[1]
     / "data"
     / "uploads"
-    / "swe_resume_template.pdf"
+    / "SWE_Resume_Template.pdf"
 )
 
 if __name__ == "__main__":

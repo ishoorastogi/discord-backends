@@ -64,3 +64,6 @@ junit.xml
 ._*
 Thumbs.db
 Desktop.ini
+
+# Generated files; retain the directory placeholder.
+extracted_resume.txt
