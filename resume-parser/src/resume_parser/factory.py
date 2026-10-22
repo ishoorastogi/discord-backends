@@ -1,7 +1,7 @@
 """Create Resume objects from extracted resume text."""
 
 from resume_parser.exceptions import EmptyResumeTextError
-from resume_parser.models import Resume
+from resume_parser.resume_obj import Resume
 
 
 class ResumeFactory:
