@@ -51,7 +51,7 @@ module layout.
 ## Usage
 
 After installing the package as described above, run the sample script from
-this directory. It uses `../data/uploads/swe_resume_template.pdf` by default
+this directory. It uses `SWE_Resume_Template.pdf` in this directory by default
 (relative to this directory). Supply your own PDF if that local file is absent:
 
 ```powershell
