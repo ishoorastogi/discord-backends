@@ -29,7 +29,7 @@ class Settings:
 
 def load_environment() -> None:
     """Load internships/src/.env, preserving shell environment variables."""
-    load_dotenv(Path(__file__).resolve().parent / ".env", override=False)
+    load_dotenv(Path(__file__).resolve().parent.parent / "src/.env", override=False)
     os.environ.setdefault("LOG_LEVEL", LOG_LEVEL)
     if LOG_FILE is not None:
         os.environ.setdefault("LOG_FILE", str(LOG_FILE))
@@ -37,7 +37,7 @@ def load_environment() -> None:
 
 def load_settings() -> Settings:
     """Validate connection values and resolve optional configuration overrides."""
-    config_path = Path(__file__).resolve().parent / "config.json"
+    config_path = Path(__file__).resolve().parent.parent / "src/config.json"
     try:
         with config_path.open(encoding="utf-8") as config_file:
             connection = json.load(config_file)

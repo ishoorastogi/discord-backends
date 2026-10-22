@@ -82,7 +82,7 @@ def drain(event_queue, timeout: float) -> int:
         return event_queue.unfinished_tasks
 
 
-def stop_workers(event_queue, workers, timeout: float) -> int:
+def stop_workers(event_queue, workers, timeout: float, name: str = "queue") -> int:
     deadline = time.monotonic() + timeout
     for worker in workers:
         try:
@@ -93,5 +93,5 @@ def stop_workers(event_queue, workers, timeout: float) -> int:
     for worker in workers:
         if not worker.join(max(0, deadline - time.monotonic())):
             alive += 1
-    logger.info("workers stopped: stopped=%s alive=%s", len(workers) - alive, alive)
+    logger.info("%s workers stopped: stopped=%s alive=%s", name, len(workers) - alive, alive)
     return alive
