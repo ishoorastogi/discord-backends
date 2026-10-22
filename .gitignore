@@ -13,6 +13,8 @@ env/
 ENV/
 __pypackages__/
 __pycache__/
+*.pyc
+.venv/
 *.py[cod]
 *$py.class
 
