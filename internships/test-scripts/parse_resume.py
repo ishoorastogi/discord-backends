@@ -13,9 +13,9 @@ from parser import parse_resume_pdf
 
 DEFAULT_PDF = (
     Path(__file__).resolve().parents[1]
-    / "data"
+    / "resume-parser"
     / "uploads"
-    / "swe_resume_template.pdf"
+    / "test_resume_1.pdf"
 )
 
 if __name__ == "__main__":

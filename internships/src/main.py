@@ -8,6 +8,7 @@ import time
 
 # Make listener modules and shared utilities available when run directly.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "event-listener"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "resume-parser"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from internships.src import config
@@ -69,8 +70,8 @@ def main() -> None:
             logger.warning("Invalid base64 PDF in resume upload: discord_id=%s", discord_id)
             return
 
-        from resume_parser import fill_resume_from_pdf
-        from resume_parser.exceptions import ResumeParserError
+        from exceptions import ResumeParserError
+        from object_filler import fill_resume_from_pdf
 
         try:
             resume = fill_resume_from_pdf(pdf_content)

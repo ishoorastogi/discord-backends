@@ -1,10 +1,12 @@
 """Public API for the flat resume parser modules."""
 
+from factory import ResumeFactory
 from models import Resume
 from parser import parse_resume_pdf, parse_resume_text
 
 __all__ = [
     "Resume",
+    "ResumeFactory",
     "parse_resume_pdf",
     "parse_resume_text",
 ]

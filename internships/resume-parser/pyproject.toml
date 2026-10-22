@@ -20,7 +20,9 @@ dev = [
 [tool.setuptools]
 py-modules = [
     "exceptions",
+    "factory",
     "models",
+    "object_filler",
     "parser",
     "pdf_reader",
     "resume_parser",

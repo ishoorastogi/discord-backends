@@ -1,5 +1,5 @@
-from resume_parser import object_filler
-from resume_parser.resume_obj import Resume
+import object_filler
+from models import Resume
 
 
 def test_fill_resume_from_pdf_uses_extracted_text_and_factory(monkeypatch):

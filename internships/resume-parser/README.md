@@ -6,7 +6,9 @@ A set of Python modules for reading resume PDFs into raw text. Like
 ```text
 resume-parser/
 ├── exceptions.py      # Parser errors
+├── factory.py         # Resume object creation
 ├── models.py          # Resume with raw_text only
+├── object_filler.py   # Resume creation from uploaded PDF bytes
 ├── parser.py          # Text and PDF parsing
 ├── pdf_reader.py      # PDF text extraction
 └── resume_parser.py   # Public API exports

@@ -4,13 +4,15 @@ from pathlib import Path
 
 import pytest
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "resume-parser"))
+
 from resume_parser import Resume, ResumeFactory, parse_resume_pdf, parse_resume_text
-from resume_parser.exceptions import EmptyResumeTextError, PdfReadError
+from exceptions import EmptyResumeTextError, PdfReadError
 
 
 DEFAULT_PDF = (
-    Path(__file__).resolve().parents[1]
-    / "data"
+    Path(__file__).resolve().parents[2]
+    / "resume-parser"
     / "uploads"
     / "test_resume_1.pdf"
 )
