@@ -7,30 +7,28 @@ from unittest.mock import patch
 from pathlib import Path
 import sys
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "event-listener"))
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "event-listener"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
-from internships.tests.support import BaseTest, reset_logging
+from support import BaseTest, reset_logging
 
 
 class StartupConfigTests(BaseTest):
     def setUp(self):
         super().setUp()
         reset_logging()
-        from internships import main
+        from internships.src import main
 
         self.main = main
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         self.root = Path(directory.name)
-        service_dir = self.root / "internships"
-        service_dir.mkdir()
-        self.env_path = service_dir / ".env"
-        self.config_path = service_dir / "config.json"
+        source_dir = self.root / "internships" / "src"
+        source_dir.mkdir(parents=True)
+        self.env_path = source_dir / ".env"
+        self.config_path = source_dir / "config.json"
         self.write_config()
-        listener_dir = service_dir / "event-listener"
-        listener_dir.mkdir()
-        location = patch.object(main.config, "__file__", str(listener_dir / "config.py"))
+        location = patch.object(main.config, "__file__", str(source_dir / "config.py"))
         location.start()
         self.addCleanup(location.stop)
         environment = patch.dict(os.environ, {}, clear=True)
@@ -122,7 +120,7 @@ class StartupConfigTests(BaseTest):
     def test_missing_config_rejected_without_traceback(self):
         self.config_path.unlink()
         output = self.run_config("")
-        self.assertIn("Cannot load internships/config.json", output)
+        self.assertIn("Cannot load internships/src/config.json", output)
         self.assertNotIn("Traceback", output)
 
     def test_invalid_json_rejected_without_traceback(self):
@@ -130,12 +128,12 @@ class StartupConfigTests(BaseTest):
             with self.subTest(contents=contents):
                 self.config_path.write_text(contents)
                 output = self.run_config("")
-                self.assertIn("Cannot load internships/config.json", output)
+                self.assertIn("Cannot load internships/src/config.json", output)
                 self.assertNotIn("Traceback", output)
 
     def test_unreadable_config_rejected(self):
         with patch.object(Path, "open", side_effect=PermissionError("Access denied")):
-            with self.assertRaisesRegex(ValueError, "Cannot load internships/config.json"):
+            with self.assertRaisesRegex(ValueError, "Cannot load internships/src/config.json"):
                 self.main.config.load_settings()
 
     def test_non_object_config_rejected(self):
@@ -163,8 +161,9 @@ class StartupConfigTests(BaseTest):
         self.assertEqual(result.exception.code, 2)
         self.assertIn("SHUTDOWN_TIMEOUT_SECONDS must be", self.output.getvalue())
 
-    def test_does_not_load_repository_root_env(self):
-        (self.root / ".env").write_text("QUEUE_MAX_SIZE=invalid\n")
+    def test_does_not_load_env_outside_src(self):
+        for directory in (self.root, self.root / "internships"):
+            (directory / ".env").write_text("QUEUE_MAX_SIZE=invalid\n")
         self.main.config.load_environment()
         settings = self.main.config.load_settings()
         self.assertEqual(settings.queue_max_size, self.main.config.QUEUE_MAX_SIZE)

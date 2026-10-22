@@ -17,9 +17,15 @@ dev = [
     "pytest>=8.0",
 ]
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[tool.setuptools]
+py-modules = [
+    "exceptions",
+    "models",
+    "parser",
+    "pdf_reader",
+    "resume_parser",
+]
 
 [tool.pytest.ini_options]
-pythonpath = ["src"]
-testpaths = ["tests"]
+pythonpath = ["."]
+testpaths = ["../tests/resume_parser"]

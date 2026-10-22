@@ -1,25 +1,26 @@
-"""Run the resume parser against a PDF file."""
+"""Parse a resume PDF and print its raw text."""
 
 import argparse
 import sys
 from pathlib import Path
 
-from resume_parser import parse_resume_pdf
-from resume_parser.exceptions import PdfReadError
+# Resolve the sibling parser modules when running this script directly.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "resume-parser"))
+
+from exceptions import PdfReadError
+from parser import parse_resume_pdf
 
 
 DEFAULT_PDF = (
     Path(__file__).resolve().parents[1]
     / "data"
     / "uploads"
-    / "test_resume_1.pdf"
+    / "swe_resume_template.pdf"
 )
 
-
-def main() -> int:
-    """Parse a PDF and print its extracted text."""
+if __name__ == "__main__":
     argument_parser = argparse.ArgumentParser(
-        description="Extract and display text from a resume PDF."
+        description="Parse a resume PDF and print its raw text."
     )
     argument_parser.add_argument(
         "pdf_path",
@@ -37,13 +38,7 @@ def main() -> int:
         resume = parse_resume_pdf(args.pdf_path)
     except PdfReadError as exc:
         print(f"Could not parse PDF: {exc}", file=sys.stderr)
-        return 1
+        raise SystemExit(1) from exc
 
     sys.stdout.reconfigure(errors="replace")
-    print(f"Extracted text from: {args.pdf_path}\n")
     print(resume.raw_text)
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

@@ -7,14 +7,10 @@ import threading
 import time
 
 # Make listener modules and shared utilities available when run directly.
-sys.path.insert(0, str(Path(__file__).resolve().parent / "event-listener"))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(
-    0,
-    str(Path(__file__).resolve().parent.parent / "resume-parser" / "src"),
-)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "event-listener"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-import config
+from internships.src import config
 from shared.logs.log_config import get_logger
 
 

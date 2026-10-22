@@ -8,7 +8,7 @@ from typing import BinaryIO, Union
 from pypdf import PdfReader
 from pypdf.errors import PdfReadError as PypdfReadError
 
-from resume_parser.exceptions import PdfReadError
+from exceptions import PdfReadError
 
 
 PdfSource = Union[Path, BinaryIO]

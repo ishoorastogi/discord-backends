@@ -1,1 +1,1 @@
-"""Tests for the internship event listener."""
+"""Tests for the internship backend services."""
