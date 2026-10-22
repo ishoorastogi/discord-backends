@@ -7,7 +7,7 @@ import threading
 import time
 
 # Make listener modules and shared utilities available when run directly.
-SERVICE_DIR = Path(__file__).resolve().parent
+SERVICE_DIR = Path(__file__).resolve().parent.parent
 SHARED_DIR = SERVICE_DIR.parent / "shared"
 for module_dir in (
     SERVICE_DIR / "event-listener",
@@ -38,6 +38,7 @@ def main() -> None:
     # Import application modules only after logging is configured.
     event_queue = import_module("event_queue")
     intake_handler = import_module("intake-handler")
+    resume_handler = import_module("resume-handler")
     event_router = import_module("event_router")
     tcp_listener = import_module("tcp_listener")
 
@@ -53,11 +54,17 @@ def main() -> None:
     shutdown_timeout = settings.shutdown_timeout
     # Initialize event queue, handler registry, and event router
     intake_queue = event_queue.create_queue(max_size)
+    resume_queue = event_queue.create_queue(max_size)
+
     registry = event_queue.HandlerRegistry()
     router = event_router.EventRouter()
 
     # Register supported event types
-    router.register("RESUME_UPLOAD", intake_handler.handle_resume_upload)
+    router.register(
+        "RESUME_UPLOAD",
+        partial(intake_handler.handle_resume_upload, resume_queue=resume_queue),
+    )
+    router.register("PARSE", partial(resume_handler.handle_parse))
 
     # Register the router with the event queue worker
     registry.register(partial(intake_handler.process_event, router=router))
