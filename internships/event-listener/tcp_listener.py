@@ -4,7 +4,7 @@ import socketserver
 import threading
 import time
 
-from config import MAX_MESSAGE_BYTES, RECV_BUFFER_SIZE
+from internships.src.config import MAX_MESSAGE_BYTES, RECV_BUFFER_SIZE
 from shared.logs.log_config import get_logger
 from event_queue import enqueue
 

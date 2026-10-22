@@ -9,10 +9,10 @@ import threading
 import unittest
 from unittest.mock import patch
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "event-listener"))
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "event-listener"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
-from internships.tests.support import reset_logging
+from support import reset_logging
 
 # Keep import-time logging independent of the caller's environment.
 with patch.dict(os.environ, {"LOG_LEVEL": "INFO", "LOG_FILE": ""}):

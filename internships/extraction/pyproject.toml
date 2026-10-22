@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "resume-extraction"
+version = "0.1.0"
+description = "Extract structured resume fields from plain text"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[tool.setuptools]
+packages = ["extraction"]
+package-dir = {extraction = "."}
+
+[tool.pytest.ini_options]
+pythonpath = [".."]
+testpaths = ["../tests/extraction"]

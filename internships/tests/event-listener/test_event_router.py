@@ -4,10 +4,10 @@ from pathlib import Path
 import sys
 from unittest.mock import Mock, patch
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "event-listener"))
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "event-listener"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
-from internships.tests.support import BaseTest
+from support import BaseTest
 
 with patch.dict(os.environ, {"LOG_LEVEL": "INFO", "LOG_FILE": ""}):
     from event_router import EventRouter
