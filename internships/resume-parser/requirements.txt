@@ -1,2 +1,3 @@
 # Install this package and its runtime and development dependencies.
+-e ../models
 -e .[dev]

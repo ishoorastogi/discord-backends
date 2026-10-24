@@ -1,4 +1,6 @@
-"""Structured fields extracted from resume text."""
+"""Shared resume object enriched by successive processing stages."""
+
+from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 
@@ -37,11 +39,13 @@ class Skills:
 
 
 @dataclass
-class ResumeData:
+class Resume:
+    raw_text: str
     education: list[Education] = field(default_factory=list)
     projects: list[Project] = field(default_factory=list)
     skills: Skills = field(default_factory=Skills)
     experience: list[Experience] = field(default_factory=list)
 
     def to_dict(self) -> dict:
+        """Serialize at JSON or storage boundaries, outside the event pipeline."""
         return asdict(self)

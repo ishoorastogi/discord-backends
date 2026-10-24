@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 # Resolve the sibling parser modules when running this script directly.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "resume-parser"))
 
 from exceptions import PdfReadError

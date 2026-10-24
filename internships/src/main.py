@@ -6,15 +6,16 @@ import sys
 import threading
 import time
 
-# Make listener modules and shared utilities available when run directly.
+# Make listener modules, event managers, and shared utilities available when run directly.
 SERVICE_DIR = Path(__file__).resolve().parent.parent
 SHARED_DIR = SERVICE_DIR.parent / "shared"
 for module_dir in (
     SERVICE_DIR / "event-listener",
+    SERVICE_DIR / "resume-parser",
     SERVICE_DIR.parent,
     SHARED_DIR,
-    SHARED_DIR / "event-managers" / "router",
-    SHARED_DIR / "event-managers" / "handler",
+    SERVICE_DIR / "event-managers" / "router",
+    SERVICE_DIR / "event-managers" / "handler",
 ):
     sys.path.insert(0, str(module_dir))
 
@@ -60,11 +61,8 @@ def main() -> None:
     router = event_router.EventRouter()
 
     # Register supported event types
-    router.register(
-        "RESUME_UPLOAD",
-        partial(intake_handler.handle_resume_upload, resume_queue=resume_queue),
-    )
-    router.register("PARSE", partial(resume_handler.handle_parse))
+    intake_handler.register_handlers(router, resume_queue=resume_queue)
+    resume_handler.register_handlers(router, resume_queue=resume_queue)
 
     # Register the router with the event queue worker
     registry.register(partial(intake_handler.process_event, router=router))
@@ -83,6 +81,7 @@ def main() -> None:
 
     signal.signal(signal.SIGTERM, request_shutdown)
     signal.signal(signal.SIGINT, request_shutdown)
+
     intake_worker.start()
     resume_worker.start()
 

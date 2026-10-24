@@ -2,10 +2,10 @@ import pytest
 
 from extraction import (
     EmptyResumeTextError,
-    ResumeData,
     ResumeExtractor,
     extract_resume_data,
 )
+from internships.models import Resume
 
 
 def test_extract_resume_sections_and_multiple_entries():
@@ -28,7 +28,11 @@ Software Engineer | Example Co | Jan 2022 - Dec 2023
 Data Intern | Sample Co | Jun 2021 - Aug 2021
 """
 
-    data = extract_resume_data(raw_text)
+    resume = Resume(raw_text=raw_text)
+    data = extract_resume_data(resume)
+
+    assert data is resume
+    assert resume.raw_text == raw_text
 
     assert len(data.education) == 1
     assert data.education[0].school == "University of Example"
@@ -69,14 +73,31 @@ University of Example | B.S. Computer Science | May 2024
 SKILLS
 Programming Languages: Python
 """
-    data = ResumeExtractor.extract(raw_text)
+    resume = Resume(raw_text=raw_text)
+    data = ResumeExtractor.extract(resume)
 
-    assert isinstance(data, ResumeData)
+    assert data is resume
     assert data.education[0].school == "University of Example"
     assert data.skills.languages == ["Python"]
 
 
 @pytest.mark.parametrize("extract", [extract_resume_data, ResumeExtractor.extract])
 def test_extraction_rejects_empty_text(extract):
+    resume = Resume(raw_text=" \n ")
     with pytest.raises(EmptyResumeTextError):
-        extract(" \n ")
+        extract(resume)
+    assert not resume.education
+    assert not resume.projects
+    assert not resume.experience
+
+
+def test_extracting_again_replaces_fields_on_the_same_resume():
+    resume = Resume(raw_text="SKILLS\nProgramming Languages: Python")
+    extract_resume_data(resume)
+    assert resume.skills.languages == ["Python"]
+
+    resume.raw_text = "SKILLS\nProgramming Languages: Java"
+    result = extract_resume_data(resume)
+
+    assert result is resume
+    assert resume.skills.languages == ["Java"]

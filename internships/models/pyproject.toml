@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "internship-models"
+version = "0.1.0"
+description = "Shared resume models for internship processing"
+requires-python = ">=3.9"
+
+[tool.setuptools]
+packages = ["internships.models"]
+package-dir = {"internships.models" = "."}

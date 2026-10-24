@@ -1,16 +1,15 @@
 # Resume extraction
 
-Extract education, projects, skills, and experience from plain resume text.
-This package owns the extraction logic, structured models, and extraction
-errors. It uses the Python standard library and works independently of PDF
-parsing.
+Fill education, projects, skills, and experience on a shared `Resume` object.
+This package owns the extraction logic and extraction errors. The models live
+in [`../models/`](../models/README.md). Extraction uses the Python standard
+library and works independently of PDF parsing.
 
 ```text
 extraction/
 ├── __init__.py    # Public extraction API
 ├── exceptions.py  # Extraction errors
-├── extractor.py   # Structured field extraction
-└── models.py      # Education, Project, Skills, Experience, ResumeData
+└── extractor.py   # Structured field extraction
 ```
 
 From this directory, install the package and its test dependencies:
@@ -22,20 +21,23 @@ python3 -m pytest
 
 Tests live in `../tests/extraction/`.
 
-Use the extraction API with plain text:
+Use the extraction API with a shared resume:
 
 ```python
 from extraction import extract_resume_data
+from internships.models import Resume
 
-data = extract_resume_data("SKILLS\nProgramming Languages: Python")
-print(data.to_dict())
+resume = Resume(raw_text="SKILLS\nProgramming Languages: Python")
+result = extract_resume_data(resume)
+assert result is resume
+print(resume.skills.languages)
 ```
 
-`ResumeExtractor.extract(raw_text)` returns the same `ResumeData` structure.
-Both APIs reject empty input with `extraction.EmptyResumeTextError`. Extraction
-returns a new result and does not mutate a parser object.
+`ResumeExtractor.extract(resume)` also fills and returns the supplied object.
+Both APIs reject empty text with `extraction.EmptyResumeTextError`. Extraction
+preserves `raw_text` and replaces the structured fields when run again.
 
-To combine the two stages, install both packages, then pass parsed text into
+To combine the two stages, install both packages, then pass the parsed resume into
 extraction:
 
 ```python
@@ -45,9 +47,12 @@ from extraction import extract_resume_data
 from resume_parser import parse_resume_pdf
 
 resume = parse_resume_pdf(Path("../data/uploads/another-resume.pdf"))
-data = extract_resume_data(resume.raw_text)
+extract_resume_data(resume)
+print(resume.skills.languages)
 ```
 
 The manual script `../test-scripts/extract_resume.py` accepts a UTF-8 text file
 or reads standard input and prints structured JSON. See the
 [manual script instructions](../test-scripts/README.md).
+Within the event pipeline, stages pass the same object under `data.resume`.
+Call `resume.to_dict()` only when serializing for JSON or storage.

@@ -5,10 +5,10 @@ Run these scripts to inspect backend behavior manually. Automated tests live in
 
 ## Resume parsing
 
-Install the parser and extraction packages from the repository root:
+Install the shared models, parser, and extraction packages from the repository root:
 
 ```sh
-python3 -m pip install -e ./internships/resume-parser -e ./internships/extraction
+python3 -m pip install -e ./internships/models -e ./internships/resume-parser -e ./internships/extraction
 ```
 
 Parse a local resume PDF and print its raw text:
@@ -39,5 +39,6 @@ stages to parse a PDF and then extract structured fields:
 python3 internships/test-scripts/parse_resume.py /path/to/resume.pdf | python3 internships/test-scripts/extract_resume.py
 ```
 
-The extraction script imports only `../extraction/` and requires no PDF library.
+The extraction script creates a shared `Resume` from its input text, fills its
+structured fields, and serializes the result to JSON. It requires no PDF library.
 Its package metadata lives in `../extraction/pyproject.toml`.

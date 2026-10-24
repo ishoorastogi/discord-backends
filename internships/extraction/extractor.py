@@ -5,14 +5,9 @@ from __future__ import annotations
 import re
 from datetime import date
 
+from internships.models import Education, Experience, Project, Resume, Skills
+
 from .exceptions import EmptyResumeTextError
-from .models import (
-    Education,
-    Experience,
-    Project,
-    ResumeData,
-    Skills,
-)
 
 
 # --------------------------------------------------------------------------- #
@@ -349,25 +344,27 @@ def extract_projects(lines: list[str], known_skills: list[str]) -> list[Project]
 # --------------------------------------------------------------------------- #
 
 
-def extract_resume_data(raw_text: str) -> ResumeData:
-    """Turn the resume's raw text into structured data."""
-    text = raw_text.strip()
+def extract_resume_data(resume: Resume) -> Resume:
+    """Fill structured fields on a resume and return the same object."""
+    text = resume.raw_text.strip()
     if not text:
         raise EmptyResumeTextError("Resume text cannot be empty.")
     sections = _split_sections(text)
     skills = extract_skills(sections.get("skills", []))
-    return ResumeData(
-        education=extract_education(sections.get("education", [])),
-        projects=extract_projects(sections.get("projects", []), skills.all()),
-        skills=skills,
-        experience=extract_experience(sections.get("experience", [])),
-    )
+    education = extract_education(sections.get("education", []))
+    projects = extract_projects(sections.get("projects", []), skills.all())
+    experience = extract_experience(sections.get("experience", []))
+    resume.education = education
+    resume.projects = projects
+    resume.skills = skills
+    resume.experience = experience
+    return resume
 
 
 class ResumeExtractor:
     """Extract structured fields from resume text."""
 
     @staticmethod
-    def extract(raw_text: str) -> ResumeData:
-        """Return extracted data without modifying a parser object."""
-        return extract_resume_data(raw_text)
+    def extract(resume: Resume) -> Resume:
+        """Fill structured fields on the supplied resume and return it."""
+        return extract_resume_data(resume)

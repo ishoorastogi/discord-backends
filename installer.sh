@@ -46,6 +46,7 @@ check_python_version "$VENV_PYTHON"
 cd "$PROJECT_ROOT"
 "$VENV_PYTHON" -m pip install \
     --requirement "$PROJECT_ROOT/requirements.txt" \
+    --editable "$PROJECT_ROOT/internships/models" \
     --editable "$PROJECT_ROOT/internships/resume-parser[dev]" \
     --editable "$PROJECT_ROOT/internships/extraction[dev]"
 

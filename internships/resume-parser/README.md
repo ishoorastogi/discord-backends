@@ -6,7 +6,6 @@ A set of Python modules for reading resume PDFs into raw text. Like
 ```text
 resume-parser/
 ├── exceptions.py      # Parser errors
-├── models.py          # Resume with raw_text only
 ├── parser.py          # Text and PDF parsing
 ├── pdf_reader.py      # PDF text extraction
 └── resume_parser.py   # Public API exports
@@ -15,6 +14,7 @@ resume-parser/
 Tests live in `../tests/resume_parser/`, and uploaded PDFs live in
 `../data/uploads/`. Manual test scripts live in `../test-scripts/`.
 Structured field extraction lives in [`../extraction/`](../extraction/README.md).
+The shared `Resume` model lives in [`../models/`](../models/README.md).
 
 ## Setup
 
@@ -79,10 +79,10 @@ resume = parse_resume_pdf(Path("../data/uploads/another-resume.pdf"))
 print(resume.raw_text)
 ```
 
-`parser.py` reads PDF or text content into a `Resume(raw_text=...)` object.
-Modules use direct imports such as `from models import Resume`, matching the
-listener modules. `resume_parser.py` exports only the parsing API; parsing has
-no dependency on the extraction package.
+`parser.py` reads PDF or text content into the shared `Resume(raw_text=...)`
+object. Parsing fills only `raw_text`; education, projects, skills, and experience
+start empty for later stages to populate. `resume_parser.py` continues to export
+`Resume` and the parsing API. Parsing has no dependency on the extraction package.
 
 Parser tests live in `../tests/resume_parser/`. Run them from this directory with:
 

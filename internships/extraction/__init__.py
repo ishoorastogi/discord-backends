@@ -1,15 +1,16 @@
-"""Extract structured resume fields from plain text."""
+"""Enrich the shared Resume object with structured fields."""
+
+from internships.models import Education, Experience, Project, Resume, Skills
 
 from .exceptions import EmptyResumeTextError
 from .extractor import ResumeExtractor, extract_resume_data
-from .models import Education, Experience, Project, ResumeData, Skills
 
 __all__ = [
     "Education",
     "EmptyResumeTextError",
     "Experience",
     "Project",
-    "ResumeData",
+    "Resume",
     "ResumeExtractor",
     "Skills",
     "extract_resume_data",

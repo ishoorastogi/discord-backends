@@ -4,7 +4,7 @@ from pathlib import Path
 import sys
 from unittest.mock import Mock, patch
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "event-listener"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "event-managers" / "router"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 from support import BaseTest

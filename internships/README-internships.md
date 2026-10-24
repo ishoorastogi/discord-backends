@@ -2,6 +2,9 @@
 
 The [resume parser](resume-parser/README.md) reads PDF text, and
 [extraction](extraction/README.md) turns plain text into structured fields.
+Both use the shared [Resume model](models/README.md) in `models/`. Parsing creates
+the object, and extraction fills its structured fields in place. Internal events
+carry that same instance under `data.resume` through later stages.
 From the repository root, run the installer with Python 3.10 or newer. It
 installs all backend and test dependencies in `.venv` and creates `src/.env`
 from its example if missing:
@@ -31,10 +34,11 @@ the separate extraction script:
 python3 internships/test-scripts/parse_resume.py /path/to/resume.pdf | python3 internships/test-scripts/extract_resume.py
 ```
 
-`src/main.py` coordinates the backend. Its queue, processor, and TCP listener modules
-live in `event-listener/`; service tests live in `tests/event-listener/`. The entry point and
-tests add `event-listener/` to Python's import path so these modules can be
-imported by name.
+`src/main.py` coordinates the backend. Its processor and TCP listener modules live
+in `event-listener/`, and its event router and handlers live in `event-managers/`.
+The queue and logging utilities live in `../shared/`. Service tests live in
+`tests/event-listener/`. The entry point adds the listener, router, handler, and
+shared directories to Python's import path so these modules can be imported by name.
 
 After setup, run from the repository root:
 

@@ -1,10 +1,14 @@
 """Event handlers for the intake queue."""
 
 import processor
+from functools import partial
 from shared.event_queue import enqueue
 from shared.logs.log_config import get_logger
 
 logger = get_logger("intake handler")
+
+def register_handlers(router, *, resume_queue):
+    router.register("RESUME_UPLOAD", partial(handle_resume_upload, resume_queue=resume_queue))
 
 def handle_resume_upload(event: dict, *, resume_queue) -> None:
     data = event.get("data")

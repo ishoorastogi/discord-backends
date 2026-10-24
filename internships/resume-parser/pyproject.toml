@@ -9,6 +9,7 @@ description = "Extract text from resume PDFs into Python objects"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
+    "internship-models>=0.1.0",
     "pypdf>=4.0",
 ]
 
@@ -20,12 +21,11 @@ dev = [
 [tool.setuptools]
 py-modules = [
     "exceptions",
-    "models",
     "parser",
     "pdf_reader",
     "resume_parser",
 ]
 
 [tool.pytest.ini_options]
-pythonpath = ["."]
+pythonpath = ["../..", "."]
 testpaths = ["../tests/resume_parser"]
