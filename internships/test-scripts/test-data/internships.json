@@ -1,0 +1,71 @@
+[
+  {
+    "id": "bb7c0aac-5534-4988-b2eb-f17b650f5c9c",
+    "company": "H3X Technologies",
+    "role": "Embedded Controls Intern",
+    "location": "Louisville, CO",
+    "locations": [
+      "Louisville, CO"
+    ],
+    "applicationUrl": "https://jobs.ashbyhq.com/h3x-technologies/d406e4b4-9b48-438c-a2af-b7feb8563a40/application?embed=true",
+    "datePosted": 1787343255
+  },
+  {
+    "id": "2b9774d4-2b94-4dc3-9aca-7b5dc857eaa2",
+    "company": "AMD",
+    "role": "Firmware Engineer Intern/Co-op",
+    "location": "Secaucus, NJ, Rochester, NY, Austin, TX, Longmont, CO, Fishkill, NY, Fort Collins, CO, Boxborough, MA",
+    "locations": [
+      "Secaucus, NJ",
+      "Rochester, NY",
+      "Austin, TX",
+      "Longmont, CO",
+      "Fishkill, NY",
+      "Fort Collins, CO",
+      "Boxborough, MA"
+    ],
+    "applicationUrl": "https://careers.amd.com/jobs/90805?icims=1",
+    "datePosted": 1787293339
+  },
+  {
+    "id": "c042921c-cebf-43b2-952d-c5484993695b",
+    "company": "AMD",
+    "role": "Hardware Design Verification Engineer Co-op/Intern",
+    "location": "San Jose, CA, Santa Clara, CA",
+    "locations": [
+      "San Jose, CA",
+      "Santa Clara, CA"
+    ],
+    "applicationUrl": "https://careers.amd.com/jobs/90810?icims=1",
+    "datePosted": 1787293338
+  },
+  {
+    "id": "a5a8ff7e-b250-4699-8d5f-b15adf724936",
+    "company": "AMD",
+    "role": "Firmware Engineer Intern/Co-op",
+    "location": "Secaucus, NJ, Rochester, NY, Austin, TX, Longmont, CO, Fishkill, NY, Fort Collins, CO, Massachusetts",
+    "locations": [
+      "Secaucus, NJ",
+      "Rochester, NY",
+      "Austin, TX",
+      "Longmont, CO",
+      "Fishkill, NY",
+      "Fort Collins, CO",
+      "Massachusetts"
+    ],
+    "applicationUrl": "https://careers.amd.com/jobs/90801?icims=1",
+    "datePosted": 1787293338
+  },
+  {
+    "id": "3a7a0552-99e6-49df-a934-5f5f8e97109b",
+    "company": "AMD",
+    "role": "Firmware Engineering Intern Co-op - Undergrad",
+    "location": "San Jose, CA, Santa Clara, CA",
+    "locations": [
+      "San Jose, CA",
+      "Santa Clara, CA"
+    ],
+    "applicationUrl": "https://careers.amd.com/jobs/90807?icims=1",
+    "datePosted": 1787293338
+  }
+]

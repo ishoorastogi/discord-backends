@@ -40,6 +40,7 @@ def main() -> None:
     event_queue = import_module("event_queue")
     intake_handler = import_module("intake-handler")
     resume_handler = import_module("resume-handler")
+    internship_handler = import_module("internship-handler")
     event_router = import_module("event_router")
     tcp_listener = import_module("tcp_listener")
 
@@ -56,18 +57,21 @@ def main() -> None:
     # Initialize event queue, handler registry, and event router
     intake_queue = event_queue.create_queue(max_size)
     resume_queue = event_queue.create_queue(max_size)
+    internship_queue = event_queue.create_queue(max_size)
 
     registry = event_queue.HandlerRegistry()
     router = event_router.EventRouter()
 
     # Register supported event types
-    intake_handler.register_handlers(router, resume_queue=resume_queue)
+    intake_handler.register_handlers(router, resume_queue=resume_queue, internship_queue=internship_queue)
+    internship_handler.register_handlers(router, internship_queue=internship_queue)
     resume_handler.register_handlers(router, resume_queue=resume_queue)
 
     # Register the router with the event queue worker
     registry.register(partial(intake_handler.process_event, router=router))
     intake_worker = event_queue.Worker(intake_queue, registry)
     resume_worker = event_queue.Worker(resume_queue, registry)
+    internship_worker = event_queue.Worker(internship_queue, registry)
 
     server = None
     stopping = threading.Event()
@@ -84,6 +88,7 @@ def main() -> None:
 
     intake_worker.start()
     resume_worker.start()
+    internship_worker.start()
 
     try:
         for attempt in range(1, listener_config.BIND_ATTEMPTS + 1):
@@ -121,9 +126,13 @@ def main() -> None:
             clients_alive = tcp_listener.close_clients(server, remaining_time()) if server else 0
             undelivered = event_queue.drain(intake_queue, remaining_time())
             undelivered += event_queue.drain(resume_queue, remaining_time())
+            undelivered += event_queue.drain(internship_queue, remaining_time())
             logger.info("drain completed: remaining=%s", undelivered)
             workers_alive = event_queue.stop_workers(intake_queue, [intake_worker], remaining_time(), "intake queue")
             workers_alive += event_queue.stop_workers(resume_queue, [resume_worker], remaining_time(), "resume queue")
+            workers_alive += event_queue.stop_workers(
+                internship_queue, [internship_worker], remaining_time(), "internship queue",
+            )
             if undelivered or workers_alive or clients_alive:
                 logger.warning(
                     "Shutdown timed out: undelivered=%s workers_alive=%s clients_alive=%s",
