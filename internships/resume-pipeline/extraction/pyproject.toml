@@ -18,5 +18,5 @@ packages = ["extraction"]
 package-dir = {extraction = "."}
 
 [tool.pytest.ini_options]
-pythonpath = ["../..", ".."]
-testpaths = ["../tests/extraction"]
+pythonpath = [".."]
+testpaths = ["../../tests/extraction"]

@@ -8,7 +8,7 @@ Run these scripts to inspect backend behavior manually. Automated tests live in
 Install the shared models, parser, and extraction packages from the repository root:
 
 ```sh
-python3 -m pip install -e ./internships/models -e ./internships/resume-parser -e ./internships/extraction
+python3 -m pip install -e ./internships/resume-pipeline/models -e ./internships/resume-pipeline/resume-parser -e ./internships/resume-pipeline/extraction
 ```
 
 Parse a local resume PDF and print its raw text:
@@ -22,7 +22,7 @@ Without a PDF argument, the script uses
 parser imports and default PDF relative to its own location, so it can run from
 any working directory. Explicit relative PDF paths use the working directory.
 
-Runtime dependencies are declared in `../resume-parser/pyproject.toml`.
+Runtime dependencies are declared in `../resume-pipeline/resume-parser/pyproject.toml`.
 
 ## Structured extraction
 
@@ -41,4 +41,4 @@ python3 internships/test-scripts/parse_resume.py /path/to/resume.pdf | python3 i
 
 The extraction script creates a shared `Resume` from its input text, fills its
 structured fields, and serializes the result to JSON. It requires no PDF library.
-Its package metadata lives in `../extraction/pyproject.toml`.
+Its package metadata lives in `../resume-pipeline/extraction/pyproject.toml`.

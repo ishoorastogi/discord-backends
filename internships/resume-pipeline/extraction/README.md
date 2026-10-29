@@ -19,13 +19,13 @@ python3 -m pip install -r requirements.txt
 python3 -m pytest
 ```
 
-Tests live in `../tests/extraction/`.
+Tests live in `../../tests/extraction/`.
 
 Use the extraction API with a shared resume:
 
 ```python
 from extraction import extract_resume_data
-from internships.models import Resume
+from models import Resume
 
 resume = Resume(raw_text="SKILLS\nProgramming Languages: Python")
 result = extract_resume_data(resume)
@@ -46,13 +46,13 @@ from pathlib import Path
 from extraction import extract_resume_data
 from resume_parser import parse_resume_pdf
 
-resume = parse_resume_pdf(Path("../data/uploads/another-resume.pdf"))
+resume = parse_resume_pdf(Path("../../data/uploads/another-resume.pdf"))
 extract_resume_data(resume)
 print(resume.skills.languages)
 ```
 
-The manual script `../test-scripts/extract_resume.py` accepts a UTF-8 text file
+The manual script `../../test-scripts/extract_resume.py` accepts a UTF-8 text file
 or reads standard input and prints structured JSON. See the
-[manual script instructions](../test-scripts/README.md).
+[manual script instructions](../../test-scripts/README.md).
 Within the event pipeline, stages pass the same object under `data.resume`.
 Call `resume.to_dict()` only when serializing for JSON or storage.

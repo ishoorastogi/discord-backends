@@ -3,8 +3,8 @@
 from functools import partial
 
 from exceptions import ResumeParserError
-from internships.extraction import EmptyResumeTextError, extract_resume_data
-from internships.models import Resume
+from extraction import EmptyResumeTextError, extract_resume_data
+from models import Resume
 from resume_parser import parse_resume_base64
 from shared.event_queue import enqueue
 from shared.logs.log_config import get_logger

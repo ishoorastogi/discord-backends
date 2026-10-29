@@ -27,5 +27,5 @@ py-modules = [
 ]
 
 [tool.pytest.ini_options]
-pythonpath = ["../..", "."]
-testpaths = ["../tests/resume_parser"]
+pythonpath = ["..", "."]
+testpaths = ["../../tests/resume_parser"]

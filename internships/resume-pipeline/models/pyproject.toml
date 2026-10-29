@@ -9,5 +9,5 @@ description = "Shared resume models for internship processing"
 requires-python = ">=3.9"
 
 [tool.setuptools]
-packages = ["internships.models"]
-package-dir = {"internships.models" = "."}
+packages = ["models"]
+package-dir = {"models" = "."}

@@ -1,7 +1,7 @@
 # Resume Parser
 
 A set of Python modules for reading resume PDFs into raw text. Like
-`../event-listener/`, the implementation lives directly in this directory:
+`../../event-listener/`, the implementation lives directly in this directory:
 
 ```text
 resume-parser/
@@ -11,8 +11,8 @@ resume-parser/
 └── resume_parser.py   # Public API exports
 ```
 
-Tests live in `../tests/resume_parser/`, and uploaded PDFs live in
-`../data/uploads/`. Manual test scripts live in `../test-scripts/`.
+Tests live in `../../tests/resume_parser/`, and uploaded PDFs live in
+`../../data/uploads/`. Manual test scripts live in `../../test-scripts/`.
 Structured field extraction lives in [`../extraction/`](../extraction/README.md).
 The shared `Resume` model lives in [`../models/`](../models/README.md).
 
@@ -22,7 +22,7 @@ From the repository root, enter the parser directory, then create and activate
 a virtual environment and install the package and its test dependencies:
 
 ```bash
-cd internships/resume-parser
+cd internships/resume-pipeline/resume-parser
 python -m venv .venv
 ```
 
@@ -51,17 +51,17 @@ module layout.
 ## Usage
 
 After installing the package as described above, run the sample script from
-this directory. It uses `SWE_Resume_Template.pdf` in this directory by default
-(relative to this directory). Supply your own PDF if that local file is absent:
+this directory. It uses `SWE_Resume_Template.pdf` in `../../data/uploads/` by
+default. Supply your own PDF if that local file is absent:
 
 ```powershell
-python ../test-scripts/parse_resume.py
+python ../../test-scripts/parse_resume.py
 ```
 
 To parse a different PDF, pass its path:
 
 ```powershell
-python ../test-scripts/parse_resume.py "../data/uploads/another-resume.pdf"
+python ../../test-scripts/parse_resume.py "../../data/uploads/another-resume.pdf"
 ```
 
 The script prints raw resume text. Resume data may contain
@@ -75,7 +75,7 @@ from pathlib import Path
 
 from resume_parser import parse_resume_pdf
 
-resume = parse_resume_pdf(Path("../data/uploads/another-resume.pdf"))
+resume = parse_resume_pdf(Path("../../data/uploads/another-resume.pdf"))
 print(resume.raw_text)
 ```
 
@@ -84,7 +84,7 @@ object. Parsing fills only `raw_text`; education, projects, skills, and experien
 start empty for later stages to populate. `resume_parser.py` continues to export
 `Resume` and the parsing API. Parsing has no dependency on the extraction package.
 
-Parser tests live in `../tests/resume_parser/`. Run them from this directory with:
+Parser tests live in `../../tests/resume_parser/`. Run them from this directory with:
 
 ```bash
 python -m pytest

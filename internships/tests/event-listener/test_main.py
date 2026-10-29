@@ -163,9 +163,7 @@ class EntryPointTests(unittest.TestCase):
                 shutil.copy2(service / "src" / filename, copied_src / filename)
             shutil.copytree(service / "event-listener", copied_service / "event-listener")
             shutil.copytree(service / "event-managers", copied_service / "event-managers")
-            shutil.copytree(service / "resume-parser", copied_service / "resume-parser")
-            shutil.copytree(service / "extraction", copied_service / "extraction")
-            shutil.copytree(service / "models", copied_service / "models")
+            shutil.copytree(service / "resume-pipeline", copied_service / "resume-pipeline")
             shutil.copytree(service.parent / "shared", root / "shared")
             (copied_src / "config.json").write_text(json.dumps({"TCP_HOST": "127.0.0.1", "TCP_PORT": 12345}))
             unrelated = root / "unrelated"

@@ -2,7 +2,7 @@
 
 import json
 
-from internships.models import Education, Experience, Project, Resume
+from models import Education, Experience, Project, Resume
 from extraction import Resume as ExtractionResume
 from resume_parser import Resume as ParserResume
 

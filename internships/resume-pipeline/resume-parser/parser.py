@@ -6,7 +6,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from exceptions import EmptyResumeTextError, PdfReadError
-from internships.models import Resume
+from models import Resume
 from pdf_reader import extract_pdf_text
 
 
