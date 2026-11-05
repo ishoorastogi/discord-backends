@@ -85,6 +85,8 @@ class MainTests(BaseTest):
         self.assertIn("Internship submission queued for processing", output)
         self.assertIn("Internship posting prepared for populate", output)
         self.assertIn("Internship populate function activated", output)
+        self.assertIn("Handling INTERNSHIP_EXTRACTION event", output)
+        self.assertIn("Handling INTERNSHIP_NORMALIZATION event", output)
         self.assertIn("internship queue workers stopped: stopped=1 alive=0", output)
         self.assertIn("drain completed: remaining=0", output)
         self.assertNotIn("PRIVATE_INTERNSHIP_DESCRIPTION", output)
@@ -186,6 +188,7 @@ class EntryPointTests(unittest.TestCase):
             shutil.copytree(service / "resume-parser", copied_service / "resume-parser")
             shutil.copytree(service / "extraction", copied_service / "extraction")
             shutil.copytree(service / "models", copied_service / "models")
+            shutil.copytree(service / "internship-pipeline", copied_service / "internship-pipeline")
             shutil.copytree(service.parent / "shared", root / "shared")
             (copied_src / "config.json").write_text(json.dumps({"TCP_HOST": "127.0.0.1", "TCP_PORT": 12345}))
             unrelated = root / "unrelated"

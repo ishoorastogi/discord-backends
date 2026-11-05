@@ -151,7 +151,7 @@ def test_parse_prepares_posting_and_preserves_input(event):
     assert pending.empty()
 
 
-def test_processing_routes_stop_at_unimplemented_populate(event):
+def test_processing_routes_reach_normalization(event):
     router = router_module.EventRouter()
     pending = queue.Queue()
     handler.register_handlers(router, resume_queue=queue.Queue(), internship_queue=pending)
@@ -163,10 +163,16 @@ def test_processing_routes_stop_at_unimplemented_populate(event):
     populate_event = pending.get_nowait()
     assert populate_event["event"] == "INTERNSHIP_POPULATE"
     router.route(populate_event)
+    extraction_event = pending.get_nowait()
+    assert extraction_event["event"] == "INTERNSHIP_EXTRACTION"
+    router.route(extraction_event)
+    normalization_event = pending.get_nowait()
+    assert normalization_event["event"] == "INTERNSHIP_NORMALIZATION"
+    router.route(normalization_event)
     assert pending.empty()
 
 
-@pytest.mark.parametrize("stage", ["INTERNSHIP_NORMALIZATION", "INTERNSHIP_VECTORIZATION", "INTERNSHIP_POPULATE", "INTERNSHIP_SCRAPE"])
+@pytest.mark.parametrize("stage", ["INTERNSHIP_NORMALIZATION", "INTERNSHIP_VECTORIZATION"])
 def test_deferred_stages_do_not_advance(event, stage):
     pending = queue.Queue()
     router = router_module.EventRouter()
@@ -201,7 +207,7 @@ def test_parse_full_queue_does_not_report_success(event, monkeypatch):
     assert pending.empty()
 
 
-def test_populate_logs_activation_without_processing_or_payload(event, monkeypatch):
+def test_populate_builds_shared_object_without_logging_payload(event, monkeypatch):
     pending = queue.Queue()
     logger = Mock()
     monkeypatch.setattr(processing, "logger", logger)
@@ -209,20 +215,25 @@ def test_populate_logs_activation_without_processing_or_payload(event, monkeypat
     processing.register_handlers(router, internship_queue=pending)
     original = deepcopy(event)
     router.route({**event, "event": "INTERNSHIP_POPULATE"})
-    logger.info.assert_called_once_with(
-        "Internship populate function activated; population is not implemented",
-    )
+    logger.info.assert_any_call("Internship populate function activated")
+    result = pending.get_nowait()
+    assert result["event"] == "INTERNSHIP_EXTRACTION"
+    assert isinstance(result["data"]["internship"], processing.Internship)
+    assert result["data"]["internship"].raw_string == "PRIVATE_DESCRIPTION"
+    assert result["data"]["internship_posting"] == event["data"]["internship"]
     assert pending.empty()
     assert event == original
     assert "PRIVATE_DESCRIPTION" not in str(logger.mock_calls)
 
 
-def test_supplied_feed_reaches_populate_without_changing_postings(monkeypatch):
+def test_supplied_feed_scrapes_and_extracts_without_changing_postings(monkeypatch):
     import json
 
     path = Path(__file__).resolve().parents[2] / "test-scripts/test-data/internships.json"
     postings = json.loads(path.read_text(encoding="utf-8"))
     assert len(postings) == 5
+    scrape = Mock(return_value="Required Skills: Python, SQL")
+    monkeypatch.setattr(processing, "scrape_job_page", scrape)
     logger = Mock()
     monkeypatch.setattr(processing, "logger", logger)
     router = router_module.EventRouter()
@@ -239,9 +250,20 @@ def test_supplied_feed_reaches_populate_without_changing_postings(monkeypatch):
         assert populate_event["request_id"] == posting["id"]
         assert populate_event["data"]["internship"] == posting
         router.route(populate_event)
+        scrape_event = pending.get_nowait()
+        assert scrape_event["event"] == "INTERNSHIP_SCRAPE"
+        router.route(scrape_event)
+        extraction_event = pending.get_nowait()
+        assert extraction_event["event"] == "INTERNSHIP_EXTRACTION"
+        router.route(extraction_event)
+        normalized = pending.get_nowait()
+        assert normalized["event"] == "INTERNSHIP_NORMALIZATION"
+        assert normalized["data"]["internship"].required_skills == ["Python", "SQL"]
+        assert normalized["data"]["internship_posting"] == posting
+        router.route(normalized)
         assert pending.empty()
     assert postings == original
-    assert logger.info.call_count == 10  # parse and populate for each posting
+    assert scrape.call_count == 5
     assert sum(call.args[0].startswith("Internship populate function activated") for call in logger.info.call_args_list) == 5
 
 
@@ -275,3 +297,103 @@ def test_internship_upload_event_uses_intake_handler(event):
     router.route({**event, "event": "INTERNSHIP_UPLOAD"})
     assert pending.get_nowait() == {**event, "event": "INTERNSHIP_PARSE"}
     assert pending.empty()
+
+
+def test_extraction_enriches_same_object_preserves_metadata_and_text(event, monkeypatch):
+    pending = queue.Queue()
+    posting = event["data"]["internship"]
+    posting["description"] = "Required Skills: Python, SQL, python\nCompensation: $25/hour"
+    original = deepcopy(event)
+    processing.handle_populate(event, internship_queue=pending)
+    extraction_event = pending.get_nowait()
+    internship = extraction_event["data"]["internship"]
+    logger = Mock()
+    monkeypatch.setattr(processing, "logger", logger)
+    processing.handle_extraction(extraction_event, internship_queue=pending)
+    result = pending.get_nowait()
+    assert result["event"] == "INTERNSHIP_NORMALIZATION"
+    assert result["data"] is extraction_event["data"]
+    assert result["data"]["internship"] is internship
+    assert internship.required_skills == ["Python", "SQL"]
+    assert internship.compensation == "$25/hour"
+    assert internship.title == posting["title"]
+    assert internship.raw_string == posting["description"]
+    assert result["request_id"] == event["request_id"]
+    assert result["data"]["internship_posting"] == posting
+    assert event == original
+    assert "$25/hour" not in str(logger.mock_calls)
+
+
+@pytest.mark.parametrize("value", [None, "", " \n", 123, [], {}])
+def test_extraction_rejects_invalid_raw_text(value, monkeypatch):
+    pending = queue.Queue()
+    internship = processing.Internship(application_url="https://example.com", raw_string=value)
+    extract = Mock()
+    monkeypatch.setattr(processing, "extract_internship_data", extract)
+    processing.handle_extraction({"data": {"internship": internship}}, internship_queue=pending)
+    assert pending.empty()
+    extract.assert_not_called()
+
+
+@pytest.mark.parametrize("data", [None, [], {}, {"internship": {}}, {"internship": "private"}])
+def test_extraction_rejects_invalid_payload(data):
+    pending = queue.Queue()
+    processing.handle_extraction({"data": data}, internship_queue=pending)
+    assert pending.empty()
+
+
+def test_extraction_full_queue_does_not_report_handoff(monkeypatch):
+    pending = queue.Queue(maxsize=1)
+    pending.put_nowait({"event": "EXISTING"})
+    internship = processing.Internship(application_url="https://example.com", raw_string="Required Skills: Python")
+    logger = Mock()
+    monkeypatch.setattr(processing, "logger", logger)
+    processing.handle_extraction({"data": {"internship": internship}}, internship_queue=pending)
+    assert pending.get_nowait() == {"event": "EXISTING"}
+    logger.info.assert_called_once_with("Handling INTERNSHIP_EXTRACTION event")
+
+
+def test_populate_full_queue_does_not_report_handoff(event, monkeypatch):
+    pending = queue.Queue(maxsize=1)
+    pending.put_nowait({"event": "EXISTING"})
+    logger = Mock()
+    monkeypatch.setattr(processing, "logger", logger)
+    processing.handle_populate(event, internship_queue=pending)
+    logger.info.assert_called_once_with("Internship populate function activated")
+    assert pending.get_nowait() == {"event": "EXISTING"}
+
+
+@pytest.mark.parametrize("failure", [processing.RequestException("PRIVATE_ERROR"), ValueError("PRIVATE_ERROR"), OSError("PRIVATE_ERROR")])
+def test_scrape_failure_does_not_advance_or_leak_error(failure, monkeypatch):
+    pending = queue.Queue()
+    internship = processing.Internship(application_url="https://example.com/job")
+    monkeypatch.setattr(processing, "scrape_job_page", Mock(side_effect=failure))
+    logger = Mock()
+    monkeypatch.setattr(processing, "logger", logger)
+    processing.handle_scrape({"data": {"internship": internship}}, internship_queue=pending)
+    assert pending.empty()
+    assert internship.scrape_error == type(failure).__name__
+    assert "PRIVATE_ERROR" not in str(logger.mock_calls)
+
+
+@pytest.mark.parametrize("text", [None, "", " \n", 123])
+def test_scrape_empty_or_invalid_text_stops(text, monkeypatch):
+    pending = queue.Queue()
+    internship = processing.Internship(application_url="https://example.com/job")
+    monkeypatch.setattr(processing, "scrape_job_page", Mock(return_value=text))
+    processing.handle_scrape({"data": {"internship": internship}}, internship_queue=pending)
+    assert pending.empty()
+    assert internship.scrape_error == "EmptyPostingText"
+
+
+def test_scrape_full_queue_keeps_object_without_claiming_handoff(monkeypatch):
+    pending = queue.Queue(maxsize=1)
+    pending.put_nowait({"event": "EXISTING"})
+    internship = processing.Internship(application_url="https://example.com/job")
+    monkeypatch.setattr(processing, "scrape_job_page", Mock(return_value="Description: text"))
+    logger = Mock()
+    monkeypatch.setattr(processing, "logger", logger)
+    processing.handle_scrape({"data": {"internship": internship}}, internship_queue=pending)
+    assert internship.raw_string == "Description: text"
+    assert pending.get_nowait() == {"event": "EXISTING"}
+    logger.info.assert_called_once_with("Handling INTERNSHIP_SCRAPE event")

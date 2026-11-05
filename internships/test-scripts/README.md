@@ -58,19 +58,38 @@ Without a file, the script uses the five supplied postings in
 `test-data/internships.json`. Feed postings use `id`, `company`, `role`, and
 `applicationUrl`; descriptions are not required for these postings. The original
 `id`, `title`, `company`, `description`, and optional `url` format is also supported.
-The script submits each posting sequentially and verifies populate activation for
-each ID, then reports the total. No job URLs are fetched. The script starts the backend
-using `src/config.json`, sends `INTERNSHIP_SUBMIT`, verifies intake and parse logs, then verifies the
-`Internship populate function activated` logger message, and stops the process
-it started. Use `--timeout 30` to
-increase the per-stage timeout. The script verifies an `UPLOAD_ACCEPTED` TCP
-acknowledgment with the matching `request_id` for each posting, then checks the
-stage logs. Both `INTERNSHIP_UPLOAD` and `INTERNSHIP_SUBMIT` receive
-`UPLOAD_ACCEPTED` or `UPLOAD_REJECTED` (when the intake queue is full).
-Acceptance confirms intake queue admission, before payload validation or processing.
+The script submits each posting sequentially, verifies `UPLOAD_ACCEPTED` with
+the matching request ID, then waits for extraction to reach normalization.
+Acceptance confirms intake queue admission before payload validation. Both
+`INTERNSHIP_SUBMIT` and `INTERNSHIP_UPLOAD` are supported.
 
-Extraction, normalization, vectorization, populate, and scrape remain TODOs.
-The test verifies the submit → parse → populate flow and activation, not completed
-processing or storage.
-Populate and scrape event handlers are registered for future use and do not
-advance events.
+The internship flow is submit → parse → populate → scrape (when no text is
+supplied) → extraction → normalization. Populate creates the shared Internship
+object and retains the source posting in `data.internship_posting`. Scraping
+fetches the application URL using requests and BeautifulSoup, with a timeout and
+response-size limit. Supplied `raw_string` or `description` skips scraping.
+Extraction enriches the same object. Normalization and vectorization are still
+placeholders; storage is not implemented.
+
+Install dependencies using `./installer.sh`, or install the new scraper dependencies:
+
+```sh
+.venv/bin/python -m pip install -r internships/internship-pipeline/requirements.txt
+```
+
+Live pages can expire or block requests. The script reports failed IDs and exits
+with a nonzero status if any posting fails. `--timeout 45` raises the per-posting
+timeout. To exercise real HTTP fetching and extraction with a repeatable local
+page for all five records:
+
+```sh
+.venv/bin/python internships/test-scripts/internship_upload.py --fixture-html internships/test-scripts/test-data/internship_posting.html
+```
+
+Fixture mode explicitly replaces submitted application URLs with a local HTTP
+server URL and retains each original URL as `sourceApplicationUrl`. It does not
+modify the source JSON file and does not test the live employers' websites.
+
+Resume extraction remains registered under `EXTRACTION` and enriches the shared
+Resume before normalization and vectorization. Internship events use prefixed
+names so the two flows do not collide.

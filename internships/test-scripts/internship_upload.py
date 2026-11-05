@@ -2,11 +2,13 @@
 
 Run: python3 internships/test-scripts/internship_upload.py [posting.json]
 Without a file, uses test-data/internships.json (five postings). Stop any existing backend first.
-Success verifies intake, parsing, and activation of the populate placeholder;
+Success verifies intake, parsing, populate, scraping (if needed), and extraction;
 it does not assert database storage or completion of deferred stages.
 """
 
 import argparse
+from contextlib import ExitStack
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
 from pathlib import Path
@@ -26,13 +28,15 @@ SERVICE_DIR = Path(__file__).resolve().parents[1]
 DEFAULT_POSTINGS = Path(__file__).resolve().parent / "test-data/internships.json"
 
 
-def wait_for_stages(process, output, timeout):
+def wait_for_stages(process, output, timeout, *, full_pipeline=False):
     """Workers may emit stage logs before their producer logs acceptance."""
     pending = {
         "Internship submission queued for processing",
         "Internship posting prepared for populate",
         "Internship populate function activated",
     }
+    if full_pipeline:
+        pending.update({"Handling INTERNSHIP_EXTRACTION event", "Handling INTERNSHIP_NORMALIZATION event"})
     deadline = time.monotonic() + timeout
     while pending:
         remaining = deadline - time.monotonic()
@@ -46,6 +50,8 @@ def wait_for_stages(process, output, timeout):
             continue
         if line is None:
             raise RuntimeError("Backend output closed before expected stages")
+        if "Internship scraping failed:" in line:
+            raise RuntimeError(line.strip())
         pending = {message for message in pending if message not in line}
 
 
@@ -82,6 +88,7 @@ def run_test(internships, timeout):
     reader.start()
     try:
         wait_for_log(process, output, "Server started:", timeout)
+        failures = []
         for internship in internships:
             event = {
                 "event": "INTERNSHIP_SUBMIT",
@@ -99,9 +106,16 @@ def run_test(internships, timeout):
                     raise RuntimeError(f"Unexpected internship upload acknowledgment: {response}")
             print(f"PASS: upload acknowledged for internship {internship['id']}", flush=True)
             # Submit sequentially so each activation belongs to this posting.
-            wait_for_stages(process, output, timeout)
-            print(f"PASS: populate activated for internship {internship['id']}", flush=True)
-        print(f"PASS: populate activated for all {len(internships)} internships", flush=True)
+            try:
+                wait_for_stages(process, output, timeout, full_pipeline=True)
+            except RuntimeError as error:
+                failures.append(internship["id"])
+                print(f"FAIL: internship {internship['id']}: {error}", flush=True)
+                continue
+            print(f"PASS: populate and extraction completed for internship {internship['id']}", flush=True)
+        if failures:
+            raise RuntimeError(f"Extraction failed for {len(failures)}/{len(internships)} internships: {', '.join(failures)}")
+        print(f"PASS: populate and extraction completed for all {len(internships)} internships", flush=True)
     finally:
         if process.poll() is None:
             process.terminate()
@@ -118,7 +132,8 @@ def run_test(internships, timeout):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("posting", nargs="?", type=Path, help="JSON object or array (default: test-data/internships.json)")
-    parser.add_argument("--timeout", type=positive_timeout, default=15.0)
+    parser.add_argument("--timeout", type=positive_timeout, default=30.0)
+    parser.add_argument("--fixture-html", type=Path, help="Serve this local HTML instead of fetching live job URLs")
     args = parser.parse_args()
     try:
         payload = json.loads((args.posting or DEFAULT_POSTINGS).read_text(encoding="utf-8"))
@@ -127,7 +142,33 @@ def main():
             raise ValueError("Posting JSON must contain an object or a nonempty array of objects")
         if any(not isinstance(item.get("id"), str) or not item["id"].strip() for item in internships):
             raise ValueError("Each internship must have a nonempty string id")
-        run_test(internships, args.timeout)
+        with ExitStack() as stack:
+            if args.fixture_html:
+                html = args.fixture_html.read_bytes()
+
+                class FixtureHandler(BaseHTTPRequestHandler):
+                    def do_GET(self):
+                        self.send_response(200)
+                        self.send_header("Content-Type", "text/html; charset=utf-8")
+                        self.end_headers()
+                        self.wfile.write(html)
+
+                    def log_message(self, *args):
+                        pass
+
+                server = ThreadingHTTPServer(("127.0.0.1", 0), FixtureHandler)
+                stack.callback(server.server_close)
+                thread = threading.Thread(target=server.serve_forever, daemon=True)
+                thread.start()
+                stack.callback(thread.join, 3)
+                stack.callback(server.shutdown)
+                url = f"http://127.0.0.1:{server.server_port}/posting"
+                internships = [
+                    {**posting, "sourceApplicationUrl": posting.get("applicationUrl", posting.get("url")), "applicationUrl": url}
+                    for posting in internships
+                ]
+                print("FIXTURE MODE: fetching local HTML instead of the original job URLs", flush=True)
+            run_test(internships, args.timeout)
     except (OSError, ValueError, KeyError, RuntimeError) as error:
         print(f"FAIL: {error}", file=sys.stderr)
         return 1

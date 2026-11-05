@@ -86,7 +86,8 @@ def handle_extraction(event: dict, *, resume_queue):
 def handle_normalization(event: dict, *, resume_queue):
     logger.info("Handling NORMALIZATION event")
     #TODO: Implement the logic to handle the NORMALIZATION event
-    if enqueue(resume_queue, event):
+    vectorization_event = {**event, "event": "VECTORIZATION"}
+    if enqueue(resume_queue, vectorization_event):
         logger.info("Moving to VECTORIZATION stage: discord_id=%s", event.get("data", {}).get("discord_id"))
 
 def handle_vectorization(event: dict, *, resume_queue):
