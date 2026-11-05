@@ -1,0 +1,10 @@
+{
+  "skills": ["Django", "PostgreSQL", "py", "Docker"],
+  "education": [{"school": "Tech Institute", "degree": "BS", "field": "Software Engineering", "end": "2026-12"}],
+  "experience": [{
+    "title": "Server-side Engineer", "company": "Initech",
+    "bullets": ["Designed database-backed web services and deployed them with Docker"],
+    "technologies": ["Python", "Django"]
+  }],
+  "projects": [{"name": "Expense tracker", "description": "A budgeting web application", "skills": ["SQL"]}]
+}

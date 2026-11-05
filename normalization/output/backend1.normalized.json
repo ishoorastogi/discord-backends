@@ -1,0 +1,35 @@
+{
+  "skills": [
+    "Python (computer programming)",
+    "flask",
+    "SQL",
+    "JavaScript"
+  ],
+  "education": [
+    {
+      "degree": "BS",
+      "field": "Computer Science"
+    }
+  ],
+  "experience": [
+    {
+      "title": "Backend Developer",
+      "skills": [
+        "Python (computer programming)",
+        "flask",
+        "PostgreSQL",
+        "rest api"
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "Study planner",
+      "skills": [
+        "react",
+        "node.js",
+        "web programming"
+      ]
+    }
+  ]
+}

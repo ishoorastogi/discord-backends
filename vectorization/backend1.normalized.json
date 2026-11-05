@@ -1,0 +1,11 @@
+{
+  "major": "Computer Science",
+  "grad_year": 2027,
+  "skills": ["JavaScript", "Python (computer programming)", "SQL"],
+  "education": [{"degree": "BS", "field": "Computer Science"}],
+  "experience": [{"title": "Backend Developer", "skills": ["Flask", "REST APIs", "PostgreSQL"]}],
+  "projects": [{"name": "Study planner", "skills": ["React", "Node.js"]}]
+}
+
+
+

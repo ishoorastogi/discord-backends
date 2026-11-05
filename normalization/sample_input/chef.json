@@ -1,0 +1,8 @@
+{
+  "skills": ["pastry", "baking", "plating"],
+  "education": [{"school": "Culinary Institute", "degree": "AS", "field": "Culinary Arts", "end": "2025-05"}],
+  "experience": [{
+    "title": "Pastry Chef", "company": "Sweet Corner",
+    "bullets": ["Baked 200 croissants daily for a busy bakery"]
+  }]
+}

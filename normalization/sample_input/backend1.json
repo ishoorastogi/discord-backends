@@ -1,0 +1,10 @@
+{
+  "skills": ["Python", "Flask", "SQL", "JS"],
+  "education": [{"school": "State U", "degree": "BS", "field": "Computer Science", "end": "2027-05"}],
+  "experience": [{
+    "title": "Backend Developer", "company": "Acme",
+    "bullets": ["Built REST APIs in Flask serving 10k requests per day"],
+    "technologies": ["Python", "Flask", "Postgres"]
+  }],
+  "projects": [{"name": "Study planner", "description": "A scheduling web app", "skills": ["React", "Node.js"]}]
+}
