@@ -5,12 +5,11 @@ import json
 import sys
 from pathlib import Path
 
-# Resolve the sibling extraction package when running this script directly.
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+# Resolve pipeline models and extraction when running this script directly.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "resume-pipeline"))
 
 from extraction import EmptyResumeTextError, extract_resume_data
-from internships.models import Resume
+from models import Resume
 
 
 if __name__ == "__main__":

@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from datetime import date
 
-from internships.models import Education, Experience, Project, Resume, Skills
+from models import Education, Experience, Project, Resume, Skills
 
 from .exceptions import EmptyResumeTextError
 

@@ -5,7 +5,7 @@ from extraction import (
     ResumeExtractor,
     extract_resume_data,
 )
-from internships.models import Resume
+from models import Resume
 
 
 def test_extract_resume_sections_and_multiple_entries():

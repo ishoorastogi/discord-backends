@@ -1,6 +1,6 @@
 # Shared resume model
 
-`internships.models.Resume` holds raw text together with education, projects,
+`models.Resume` holds raw text together with education, projects,
 skills, and experience. The supporting `Education`, `Project`, `Skills`, and
 `Experience` classes are defined here as well.
 
@@ -24,5 +24,5 @@ The repository installer installs this package with the parser and extraction
 packages. To install them manually from the repository root:
 
 ```sh
-python3 -m pip install -e ./internships/models -e ./internships/resume-parser -e ./internships/extraction
+python3 -m pip install -e ./internships/resume-pipeline/models -e ./internships/resume-pipeline/resume-parser -e ./internships/resume-pipeline/extraction
 ```

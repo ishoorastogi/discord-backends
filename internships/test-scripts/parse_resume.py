@@ -4,9 +4,10 @@ import argparse
 import sys
 from pathlib import Path
 
-# Resolve the sibling parser modules when running this script directly.
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "resume-parser"))
+# Resolve pipeline models and parser modules when running this script directly.
+PIPELINE_DIR = Path(__file__).resolve().parents[1] / "resume-pipeline"
+sys.path.insert(0, str(PIPELINE_DIR))
+sys.path.insert(0, str(PIPELINE_DIR / "resume-parser"))
 
 from exceptions import PdfReadError
 from parser import parse_resume_pdf

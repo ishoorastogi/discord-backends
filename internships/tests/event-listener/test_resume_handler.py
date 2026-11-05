@@ -13,7 +13,7 @@ import parser as resume_parser
 from pypdf import PdfWriter
 from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
 
-from internships.models import Resume
+from models import Resume
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "event-managers" / "handler"))
 

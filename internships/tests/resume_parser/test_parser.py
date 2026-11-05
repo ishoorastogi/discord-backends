@@ -4,7 +4,7 @@ import pytest
 import parser
 
 from exceptions import EmptyResumeTextError
-from internships.models import Resume
+from models import Resume
 from parser import parse_resume_text
 from resume_parser import parse_resume_base64
 

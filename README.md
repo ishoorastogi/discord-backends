@@ -3,9 +3,9 @@ Backend Applications for discord bots
 I can type on here
 
 The internship bot's resume parser is in
-[`internships/resume-parser`](internships/resume-parser/README.md).
+[`internships/resume-pipeline/resume-parser`](internships/resume-pipeline/resume-parser/README.md).
 Structured field extraction is in
-[`internships/extraction`](internships/extraction/README.md).
+[`internships/resume-pipeline/extraction`](internships/resume-pipeline/extraction/README.md).
 
 Run `./installer.sh` with Python 3.10 or newer installed. It creates a root
 `.venv`, installs the listener, parser, extraction, and test dependencies, and
