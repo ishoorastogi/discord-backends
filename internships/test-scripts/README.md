@@ -63,8 +63,11 @@ each ID, then reports the total. No job URLs are fetched. The script starts the 
 using `src/config.json`, sends `INTERNSHIP_SUBMIT`, verifies intake and parse logs, then verifies the
 `Internship populate function activated` logger message, and stops the process
 it started. Use `--timeout 30` to
-increase the per-stage timeout. There is no internship TCP acknowledgment;
-acceptance is verified through logs from the isolated backend instance.
+increase the per-stage timeout. The script verifies an `UPLOAD_ACCEPTED` TCP
+acknowledgment with the matching `request_id` for each posting, then checks the
+stage logs. Both `INTERNSHIP_UPLOAD` and `INTERNSHIP_SUBMIT` receive
+`UPLOAD_ACCEPTED` or `UPLOAD_REJECTED` (when the intake queue is full).
+Acceptance confirms intake queue admission, before payload validation or processing.
 
 Extraction, normalization, vectorization, populate, and scrape remain TODOs.
 The test verifies the submit → parse → populate flow and activation, not completed

@@ -15,6 +15,7 @@ import socket
 import subprocess
 import sys
 import threading
+import time
 from uuid import uuid4
 
 from resume_upload import positive_timeout, wait_for_log
@@ -23,6 +24,29 @@ SERVICE_DIR = Path(__file__).resolve().parents[1]
 
 
 DEFAULT_POSTINGS = Path(__file__).resolve().parent / "test-data/internships.json"
+
+
+def wait_for_stages(process, output, timeout):
+    """Workers may emit stage logs before their producer logs acceptance."""
+    pending = {
+        "Internship submission queued for processing",
+        "Internship posting prepared for populate",
+        "Internship populate function activated",
+    }
+    deadline = time.monotonic() + timeout
+    while pending:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise RuntimeError(f"Timed out waiting for backend stages: {sorted(pending)}")
+        try:
+            line = output.get(timeout=min(remaining, 0.1))
+        except queue.Empty:
+            if process.poll() is not None:
+                raise RuntimeError(f"Backend exited with status {process.returncode}")
+            continue
+        if line is None:
+            raise RuntimeError("Backend output closed before expected stages")
+        pending = {message for message in pending if message not in line}
 
 
 def run_test(internships, timeout):
@@ -66,10 +90,16 @@ def run_test(internships, timeout):
             }
             with socket.create_connection((client_host, port), timeout=timeout) as connection:
                 connection.sendall((json.dumps(event) + "\n").encode("utf-8"))
+                with connection.makefile("rb") as responses:
+                    line = responses.readline(65536)
+                if not line.endswith(b"\n"):
+                    raise RuntimeError("Incomplete internship upload acknowledgment")
+                response = json.loads(line)
+                if response.get("event") != "UPLOAD_ACCEPTED" or response.get("request_id") != event["request_id"]:
+                    raise RuntimeError(f"Unexpected internship upload acknowledgment: {response}")
+            print(f"PASS: upload acknowledged for internship {internship['id']}", flush=True)
             # Submit sequentially so each activation belongs to this posting.
-            wait_for_log(process, output, "Internship submission queued for processing", timeout)
-            wait_for_log(process, output, "Internship posting prepared for populate", timeout)
-            wait_for_log(process, output, "Internship populate function activated", timeout)
+            wait_for_stages(process, output, timeout)
             print(f"PASS: populate activated for internship {internship['id']}", flush=True)
         print(f"PASS: populate activated for all {len(internships)} internships", flush=True)
     finally:

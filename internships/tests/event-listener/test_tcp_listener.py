@@ -274,6 +274,42 @@ class ServerTests(BaseTest):
         self.assertEqual(self.pending.get(timeout=3), event)
         self.pending.task_done()
 
+    def test_internship_upload_aliases_acknowledge_original_event(self):
+        client = self.connect()
+        for event_type in ("INTERNSHIP_UPLOAD", "INTERNSHIP_SUBMIT"):
+            with self.subTest(event_type=event_type):
+                event = {"event": event_type, "request_id": event_type,
+                         "data": {"internship": {"id": "i1"}}}
+                client.sendall(json.dumps(event).encode() + b"\n")
+                self.assertEqual(self.read_response(client), {
+                    "event": "UPLOAD_ACCEPTED", "request_id": event_type,
+                    "message": "Internship successfully received by backend",
+                })
+                self.assertEqual(self.pending.get(timeout=3), event)
+                self.pending.task_done()
+                self.assertTrue(self.pending.empty())
+
+    def test_internship_upload_aliases_reject_full_queue_then_recover(self):
+        client = self.connect()
+        for event_type in ("INTERNSHIP_UPLOAD", "INTERNSHIP_SUBMIT"):
+            with self.subTest(event_type=event_type):
+                for number in range(10):
+                    self.pending.put_nowait({"queued_id": number})
+                event = {"event": event_type, "request_id": event_type, "data": {}}
+                line = json.dumps(event).encode() + b"\n"
+                client.sendall(line)
+                self.assertEqual(self.read_response(client), {
+                    "event": "UPLOAD_REJECTED", "request_id": event_type,
+                    "message": "Backend queue is full",
+                })
+                for number in range(10):
+                    self.assertEqual(self.pending.get_nowait(), {"queued_id": number})
+                    self.pending.task_done()
+                client.sendall(line)
+                self.assertEqual(self.read_response(client)["event"], "UPLOAD_ACCEPTED")
+                self.assertEqual(self.pending.get(timeout=3), event)
+                self.pending.task_done()
+
     def assert_event_queued(self):
         self.assertEqual(self.pending.get(timeout=3), EVENT)
         self.pending.task_done()

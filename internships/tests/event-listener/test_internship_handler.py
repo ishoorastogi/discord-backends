@@ -19,7 +19,8 @@ def load_module(name, relative_path):
 
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "event-listener"))
-handler = load_module("internship_intake_handler", "event-managers/handler/intake-handler.py")
+intake = load_module("internship_intake_handler", "event-managers/handler/intake-handler.py")
+handler = intake
 processing = load_module("internship_processing_handler", "event-managers/handler/internship-handler.py")
 router_module = load_module("internship_test_router", "event-managers/router/event_router.py")
 
@@ -77,7 +78,7 @@ def test_invalid_payload_does_not_advance(event, key, value):
     else:
         event["data"][key] = value
     pending = queue.Queue()
-    handler.handle_internship_submit(event, internship_queue=pending)
+    handler.handle_internship_upload(event, internship_queue=pending)
     assert pending.empty()
 
 
@@ -86,7 +87,7 @@ def test_invalid_payload_does_not_advance(event, key, value):
 def test_required_fields_are_nonempty_strings(event, field, value):
     event["data"]["internship"][field] = value
     pending = queue.Queue()
-    handler.handle_internship_submit(event, internship_queue=pending)
+    handler.handle_internship_upload(event, internship_queue=pending)
     assert pending.empty()
 
 
@@ -94,7 +95,7 @@ def test_required_fields_are_nonempty_strings(event, field, value):
 def test_missing_required_field_does_not_advance(event, field):
     del event["data"]["internship"][field]
     pending = queue.Queue()
-    handler.handle_internship_submit(event, internship_queue=pending)
+    handler.handle_internship_upload(event, internship_queue=pending)
     assert pending.empty()
 
 
@@ -102,14 +103,14 @@ def test_missing_required_field_does_not_advance(event, field):
 def test_invalid_optional_url_does_not_advance(event, url):
     event["data"]["internship"]["url"] = url
     pending = queue.Queue()
-    handler.handle_internship_submit(event, internship_queue=pending)
+    handler.handle_internship_upload(event, internship_queue=pending)
     assert pending.empty()
 
 
 def test_url_is_optional_and_discord_id_not_required(event):
     del event["data"]["internship"]["url"]
     pending = queue.Queue()
-    handler.handle_internship_submit(event, internship_queue=pending)
+    handler.handle_internship_upload(event, internship_queue=pending)
     assert pending.get_nowait()["event"] == "INTERNSHIP_PARSE"
 
 
@@ -119,7 +120,7 @@ def test_full_queue_does_not_report_success_or_log_payload(event, monkeypatch):
     pending.put_nowait(existing)
     logger = Mock()
     monkeypatch.setattr(handler, "logger", logger)
-    handler.handle_internship_submit(event, internship_queue=pending)
+    handler.handle_internship_upload(event, internship_queue=pending)
     assert pending.get_nowait() is existing
     assert pending.empty()
     logger.info.assert_not_called()
@@ -129,10 +130,10 @@ def test_full_queue_does_not_report_success_or_log_payload(event, monkeypatch):
 def test_success_and_validation_logs_do_not_expose_posting(event, monkeypatch):
     logger = Mock()
     monkeypatch.setattr(handler, "logger", logger)
-    handler.handle_internship_submit(event, internship_queue=queue.Queue())
+    handler.handle_internship_upload(event, internship_queue=queue.Queue())
     logger.info.assert_called_once()
     event["data"]["internship"]["url"] = "https://user:PRIVATE_SECRET@example.com"
-    handler.handle_internship_submit(event, internship_queue=queue.Queue())
+    handler.handle_internship_upload(event, internship_queue=queue.Queue())
     logger.warning.assert_called_once()
     assert "PRIVATE_DESCRIPTION" not in str(logger.mock_calls)
     assert "PRIVATE_SECRET" not in str(logger.mock_calls)
@@ -177,7 +178,7 @@ def test_deferred_stages_do_not_advance(event, stage):
 def test_resume_only_registration_remains_compatible():
     router = router_module.EventRouter()
     pending = queue.Queue()
-    handler.register_handlers(router, resume_queue=pending)
+    intake.register_handlers(router, resume_queue=pending, internship_queue=queue.Queue())
     router.route({"event": "RESUME_UPLOAD", "data": {"discord_id": "123"}})
     assert pending.get_nowait()["event"] == "PARSE"
 
@@ -249,5 +250,28 @@ def test_feed_missing_fields_are_rejected(field):
     posting = {"id": "i1", "company": "Example", "role": "Intern", "applicationUrl": "https://example.com/job"}
     del posting[field]
     pending = queue.Queue()
-    handler.handle_internship_submit({"data": {"internship": posting}}, internship_queue=pending)
+    handler.handle_internship_upload({"data": {"internship": posting}}, internship_queue=pending)
+    assert pending.empty()
+
+
+def test_upload_script_accepts_worker_logs_before_acceptance(monkeypatch):
+    monkeypatch.syspath_prepend(str(Path(__file__).resolve().parents[2] / "test-scripts"))
+    script = load_module("internship_upload_script_test", "test-scripts/internship_upload.py")
+    output = queue.Queue()
+    for message in (
+        "Internship posting prepared for populate",
+        "Internship populate function activated",
+        "Internship submission queued for processing",
+    ):
+        output.put(message)
+    script.wait_for_stages(Mock(), output, 0.5)
+    assert output.empty()
+
+
+def test_internship_upload_event_uses_intake_handler(event):
+    pending = queue.Queue()
+    router = router_module.EventRouter()
+    intake.register_handlers(router, resume_queue=queue.Queue(), internship_queue=pending)
+    router.route({**event, "event": "INTERNSHIP_UPLOAD"})
+    assert pending.get_nowait() == {**event, "event": "INTERNSHIP_PARSE"}
     assert pending.empty()

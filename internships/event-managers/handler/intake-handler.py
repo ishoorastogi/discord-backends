@@ -8,13 +8,10 @@ from shared.logs.log_config import get_logger
 
 logger = get_logger("intake handler")
 
-def register_handlers(router, *, resume_queue, internship_queue=None):
+def register_handlers(router, *, resume_queue, internship_queue):
     router.register("RESUME_UPLOAD", partial(handle_resume_upload, resume_queue=resume_queue))
-    if internship_queue is not None:
-        router.register(
-            "INTERNSHIP_SUBMIT",
-            partial(handle_internship_submit, internship_queue=internship_queue),
-        )
+    router.register("INTERNSHIP_UPLOAD", partial(handle_internship_upload, internship_queue=internship_queue))
+    router.register("INTERNSHIP_SUBMIT", partial(handle_internship_upload, internship_queue=internship_queue))
 
 def handle_resume_upload(event: dict, *, resume_queue) -> None:
     data = event.get("data")
@@ -32,12 +29,12 @@ def handle_resume_upload(event: dict, *, resume_queue) -> None:
     enqueue(resume_queue, {**event, "event": "PARSE"})
     return
 
-
-def handle_internship_submit(event: dict, *, internship_queue) -> None:
+def handle_internship_upload(event: dict, *, internship_queue) -> None:
     """Forward a valid posting without mutating its envelope or contents."""
+
     data = event.get("data")
     if not isinstance(data, dict):
-        logger.warning("Invalid internship submission payload")
+        logger.warning("Invalid internship upload payload")
         return
 
     internship = data.get("internship")
