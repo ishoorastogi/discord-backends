@@ -10,6 +10,7 @@ if str(PIPELINE_ROOT) not in sys.path:
     sys.path.insert(0, str(PIPELINE_ROOT))
 
 from models.Internship import Internship
+from scripts.internship_extractor import extract_internship_data
 from scripts.internship_factory import create_internships
 from scripts.job_page_scraper import scrape_job_page
 from scripts.output_writer import OUTPUT_PATH, write_internship_report
@@ -34,6 +35,8 @@ def run_pipeline(
             internship.raw_string = scrape_job_page(internship.application_url)
         except requests.RequestException as error:
             internship.scrape_error = str(error)
+        else:
+            extract_internship_data(internship)
     write_internship_report(internships, output_path)
 
 

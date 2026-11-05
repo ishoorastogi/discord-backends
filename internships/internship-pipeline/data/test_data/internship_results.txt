@@ -1,42 +1,148 @@
-Internship 1
-Application URL: https://jobs.ashbyhq.com/h3x-technologies/d406e4b4-9b48-438c-a2af-b7feb8563a40/application?embed=true
+Application URL: https://www.linkedin.com/jobs/view/ai-analytics-2027-intern-at-lennox-4468821973/
 Job ID: Not provided
-Raw page text:
-Not available
-Scrape error: 404 Client Error: Not Found for url: https://jobs.ashbyhq.com/h3x-technologies/d406e4b4-9b48-438c-a2af-b7feb8563a40/application?embed=true
-
-Internship 2
-Application URL: https://careers.amd.com/jobs/90805?icims=1
-Job ID: Not provided
-Raw page text:
-Title: 2027 Masters Firmware Engineering Intern/Co-op
-
+Raw string: Title: AI & Analytics 2027 Intern
+Company: Lennox
+Location: Richardson, TX
+Date posted: 4 days ago
+Employment type: Internship
 Description:
-ADVANCE YOUR CAREER. ADVANCE THE WORLD. At AMD, we believe technology has the power to solve the world’s most important challenges. From advancing healthcare and scientific discovery to powering AI and the technologies people rely on every day, innovation at AMD is shaping the future. Whether you’re designing next-gen processors, enabling AI breakthroughs, or bringing leading edge products to market, every role at AMD contributes to something bigger — technology that moves the world forward. Join us and, together, we’ll advance your career. As an AMD intern and co-op, you’ll be placed at the epicenter of the AI ecosystem, working alongside experts and industry pioneers. You’ll do important work, learn new skills, expand your network, and gain real-world experience on projects that impact millions of end-users worldwide. Whether you’re an undergrad or a PhD student, your contributions matter—and your experience here will be a launchpad for what comes next. JOB DETAILS: Locations: Austin, TX, Boxborough, MA, Fort Collins, CO, Longmont, CO, Fishkill, NY, Rochester, NY, Secaucus, NJ Onsite/Hybrid: This role requires the student to work full time (40 hours a week), in either a hybrid or onsite work structure throughout the duration of the co-op/intern term Duration: Spring/Summer Co-op : January 25, 2027 - August 13, 2027 Summer Internship: Semester Students: May 24, 2027 - August 13, 2027 Quarter Students: June 21, 2027 - September 10, 2027 Summer/Fall Co-op : Semester Students: May 24, 2027 - December 10, 2027 Quarter Students: June 21, 2027 - December 10, 2027 WHAT YOU WILL BE DOING: We are seeking highly motivated Firmware Engineering intern/co-op to join our team and work with team members in the support, design, development, and delivery of Firmware for AMD’s discrete and embedded products. In this role – We will assign you responsibilities to craft, implement, debug, and validate features on reference hardware and software, pre-silicon emulation and simulation environments supporting AMD products We will encourage to actively participate in design reviews, code reviews and project planning We will train you to build and complete clear documentation for all software produced We will provide opportunities to work on both internal and external platforms We will help you learn and apply AGILE methodologies and standard processes for Software Engineering You may be involved in one or more (but not limited to) of the following work - Engage in x86 firmware development using C Design, Build and Implementation of Embedded Firmware + Bootrom/HW Debug issues at the boundary of FW and HW. We will have your involvement in Waveform level analysis to root cause FW/HW issues WHO WE ARE LOOKING FOR : You are currently enrolled in a US based University in a Master’s program majoring in Electrical Engineering, Computer Science, Computer Engineering, or a related field If you have knowledge or experience with any of the following technical skills (or related areas) and are enthusiastic about this role, we strongly encourage you to apply – Low level BIOS, firmware, or system software development Low level programming language C/C++ and knowledge of hardware architectures Embedded system, RTOS, and embedded controller structure Source control, debuggers, compilers and system wide debugging from software to firmware to hardware Opensource concepts VHDL/Verilog/FPGA and general hardware design concepts and process Linux development environments Architectural understanding and/or experience of graphics/compute pipelines Perforce, JIRA, Git, or similar tools Note: By submitting your application, you are indicating your interest in AMD intern positions. We are recruiting for multiple positions, and if your experience aligns with any of our intern opportunities, a recruiter will contact you. This role is not eligible for visa sponsorship. Benefits offered are described: AMD benefits at a glance . AMD does not accept unsolicited resumes from headhunters, recruitment agencies, or fee-based recruitment services. AMD and its subsidiaries are equal opportunity, inclusive employers and will consider all applicants without regard to age, ancestry, color, marital status, medical condition, mental or physical disability, national origin, race, religion, political and/or third-party affiliation, sex, pregnancy, sexual orientation, gender identity, military or veteran status, or any other characteristic protected by law. We encourage applications from all qualified candidates and will accommodate applicants’ needs under the respective laws throughout all stages of the recruitment and selection process. AMD may use Artificial Intelligence to help screen, assess or select applicants for this position. AMD’s “Responsible AI Policy” is available here. This posting is for an existing vacancy.
-
-Internship 3
-Application URL: https://careers.amd.com/jobs/90810?icims=1
-Job ID: Not provided
-Raw page text:
-Title: 2027 Masters Hardware Design Verification Engineering Co-op/Intern
-
-Description:
-ADVANCE YOUR CAREER. ADVANCE THE WORLD. At AMD, we believe technology has the power to solve the world’s most important challenges. From advancing healthcare and scientific discovery to powering AI and the technologies people rely on every day, innovation at AMD is shaping the future. Whether you’re designing next-gen processors, enabling AI breakthroughs, or bringing leading edge products to market, every role at AMD contributes to something bigger — technology that moves the world forward. Join us and, together, we’ll advance your career. As an AMD intern or co-op, you’ll be placed at the epicenter of the AI ecosystem, working alongside experts and industry pioneers. You’ll do important work, learn new skills, expand your network, and gain real-world experience on projects that impact millions of end-users worldwide. Whether you’re an undergrad or a PhD student, your contributions matter—and your experience here will be a launchpad for what comes next. JOB DETAILS: Location: San Jose, CA or Santa Clara,CA Onsite/Hybrid: This role requires the student to work full time (40 hours a week), in either a hybrid or onsite work structure throughout the duration of the co-op/intern term Duration: Spring/Summer Co-op : January 25, 2027 - August 13, 2027 Summer Internship: Semester Students: May 24, 2027 - August 13, 2027 Quarter Students: June 21, 2027 - September 10, 2027 Summer/Fall Co-op : Semester Students: May 24, 2027 - December 10, 2027 Quarter Students: June 21, 2027 - December 10, 2027 WHAT YOU WILL BE DOING: We are seeking a highly motivated Hardware Design Verification engineering intern/co-op to join our team and work towards design, built, and delivery of AMD’s high-end Machine Intelligence products. In this role you will participate in one or more of (but not limited to) the below assignments – Collaborate with senior engineers and/or designers to build and complete performance verification test plan, simulation test cases and models Write scripts related to tracking and managing compute resources using Perl/Python Test regression flows written in Perl/Python/MySQL/PHP to support our project development Review new tools, processes and options to improve simulation performance, team efficiency and reduction of duplications Support debugging, improving test cases/models and Verilog/system Verilog coding Build test platforms and perform system level testing Production validation tasks, testing the integrated hardware and software functionalities to ensure problem-free production Use software and other tools to engage in low level testing of hardware/software features, debugging technical issues and identifying root cause WHO WE ARE LOOKING FOR : You are currently enrolled in a United States based University in a Master's program majoring in Electrical engineering or Computer engineering or a related field If you have knowledge / experience with any of the following technical skills (or related areas) and are enthusiastic about this role, we strongly encourage you to apply – Programming languages and scripts such as C++ /Python /C /Perl /Shell /UVM Verilog and System Verilog Good understanding of the digital systems and computer organization Building a PC from individual components, installing OS/drivers, basic network configuration, graphic cards CPU/APU System level hardware and software design Development and debugging in Linux / Unix / Windows environments Fundamentals of logic design (FSM, gates, registers, flops, timing, HDL) An understanding of analog and digital transistor device behavior Oscilloscopes, volt meters, logic analyzers, multimeters and other lab equipment Note: By submitting your application, you are indicating your interest in AMD intern positions. We are recruiting for multiple positions, and if your experience aligns with any of our intern opportunities, a recruiter will contact you. This role is not eligible for visa sponsorship. Benefits offered are described: AMD benefits at a glance . AMD does not accept unsolicited resumes from headhunters, recruitment agencies, or fee-based recruitment services. AMD and its subsidiaries are equal opportunity, inclusive employers and will consider all applicants without regard to age, ancestry, color, marital status, medical condition, mental or physical disability, national origin, race, religion, political and/or third-party affiliation, sex, pregnancy, sexual orientation, gender identity, military or veteran status, or any other characteristic protected by law. We encourage applications from all qualified candidates and will accommodate applicants’ needs under the respective laws throughout all stages of the recruitment and selection process. AMD may use Artificial Intelligence to help screen, assess or select applicants for this position. AMD’s “Responsible AI Policy” is available here. This posting is for an existing vacancy.
-
-Internship 4
-Application URL: https://careers.amd.com/jobs/90801?icims=1
-Job ID: Not provided
-Raw page text:
-Title: 2027 Undergrad Firmware Engineering Intern/Co-op
-
-Description:
-ADVANCE YOUR CAREER. ADVANCE THE WORLD. At AMD, we believe technology has the power to solve the world’s most important challenges. From advancing healthcare and scientific discovery to powering AI and the technologies people rely on every day, innovation at AMD is shaping the future. Whether you’re designing next-gen processors, enabling AI breakthroughs, or bringing leading edge products to market, every role at AMD contributes to something bigger — technology that moves the world forward. Join us and, together, we’ll advance your career. As an AMD intern and co-op, you’ll be placed at the epicenter of the AI ecosystem, working alongside experts and industry pioneers. You’ll do important work, learn new skills, expand your network, and gain real-world experience on projects that impact millions of end-users worldwide. Whether you’re an undergrad or a PhD student, your contributions matter—and your experience here will be a launchpad for what comes next. JOB DETAILS: Locations: Austin, TX, Boxborough, MA, Fort Collins, CO, Longmont, CO, Fishkill, NY, Rochester, NY, Secaucus, NJ Onsite/Hybrid: This role requires the student to work full time (40 hours a week), in either a hybrid or onsite work structure throughout the duration of the co-op/intern term Duration: Spring/Summer Co-op : January 25, 2027 - August 13, 2027 Summer Internship: Semester Students: May 24, 2027 - August 13, 2027 Quarter Students: June 21, 2027 - September 10, 2027 Summer/Fall Co-op : Semester Students: May 24, 2027 - December 10, 2027 Quarter Students: June 21, 2027 - December 10, 2027 WHAT YOU WILL BE DOING: We are seeking highly motivated Firmware Engineering intern/co-op to join our team and work with team members in the support, design, development, and delivery of Firmware for AMD’s discrete and embedded products. In this role – We will assign you responsibilities to craft, implement, debug, and validate features on reference hardware and software, pre-silicon emulation and simulation environments supporting AMD products We will encourage to actively participate in design reviews, code reviews and project planning We will train you to build and complete clear documentation for all software produced We will provide opportunities to work on both internal and external platforms We will help you learn and apply AGILE methodologies and standard processes for Software Engineering You may be involved in one or more (but not limited to) of the following work - Engage in x86 firmware development using C Design, Build and Implementation of Embedded Firmware + Bootrom/HW Debug issues at the boundary of FW and HW. We will have your involvement in Waveform level analysis to root cause FW/HW issues WHO WE ARE LOOKING FOR : You are currently enrolled in a US based University in a Bachelor’s program majoring in Electrical Engineering, Computer Science, Computer Engineering, or a related field If you have knowledge or experience with any of the following technical skills (or related areas) and are enthusiastic about this role, we strongly encourage you to apply – Low level BIOS, firmware, or system software development Low level programming language C/C++ and knowledge of hardware architectures Embedded system, RTOS, and embedded controller structure Source control, debuggers, compilers and system wide debugging from software to firmware to hardware Opensource concepts VHDL/Verilog/FPGA and general hardware design concepts and process Linux development environments Architectural understanding and/or experience of graphics/compute pipelines Perforce, JIRA, Git, or similar tools Note: By submitting your application, you are indicating your interest in AMD intern positions. We are recruiting for multiple positions, and if your experience aligns with any of our intern opportunities, a recruiter will contact you. This role is not eligible for visa sponsorship. Benefits offered are described: AMD benefits at a glance . AMD does not accept unsolicited resumes from headhunters, recruitment agencies, or fee-based recruitment services. AMD and its subsidiaries are equal opportunity, inclusive employers and will consider all applicants without regard to age, ancestry, color, marital status, medical condition, mental or physical disability, national origin, race, religion, political and/or third-party affiliation, sex, pregnancy, sexual orientation, gender identity, military or veteran status, or any other characteristic protected by law. We encourage applications from all qualified candidates and will accommodate applicants’ needs under the respective laws throughout all stages of the recruitment and selection process. AMD may use Artificial Intelligence to help screen, assess or select applicants for this position. AMD’s “Responsible AI Policy” is available here. This posting is for an existing vacancy.
-
-Internship 5
-Application URL: https://careers.amd.com/jobs/90807?icims=1
-Job ID: Not provided
-Raw page text:
-Title: 2027 Undergrad Firmware Engineering Co-op/Intern
-
-Description:
-ADVANCE YOUR CAREER. ADVANCE THE WORLD. At AMD, we believe technology has the power to solve the world’s most important challenges. From advancing healthcare and scientific discovery to powering AI and the technologies people rely on every day, innovation at AMD is shaping the future. Whether you’re designing next-gen processors, enabling AI breakthroughs, or bringing leading edge products to market, every role at AMD contributes to something bigger — technology that moves the world forward. Join us and, together, we’ll advance your career. As an AMD intern and co-op, you’ll be placed at the epicenter of the AI ecosystem, working alongside experts and industry pioneers. You’ll do important work, learn new skills, expand your network, and gain real-world experience on projects that impact millions of end-users worldwide. Whether you’re an undergrad or a PhD student, your contributions matter—and your experience here will be a launchpad for what comes next. JOB DETAILS: Location: San Jose, CA or Santa Clara, CA Onsite/Hybrid: This role requires the student to work full time (40 hours a week), in either a hybrid or onsite work structure throughout the duration of the co-op/intern term Duration: Spring/Summer Co-op : January 25, 2027 - August 13, 2027 Summer Internship: Semester Students: May 24, 2027 - August 13, 2027 Quarter Students: June 21, 2027 - September 10, 2027 Summer/Fall Co-op : Semester Students: May 24, 2027 - December 10, 2027 Quarter Students: June 21, 2027 - December 10, 2027 WHAT YOU WILL BE DOING: We are seeking highly motivated Firmware Engineering intern/co-op to join our team and work with team members in the support, design, development, and delivery of Firmware for AMD’s discrete and embedded products. In this role – We will assign you responsibilities to craft, implement, debug, and validate features on reference hardware and software, pre-silicon emulation and simulation environments supporting AMD products We will encourage to actively participate in design reviews, code reviews and project planning We will train you to build and complete clear documentation for all software produced We will provide opportunities to work on both internal and external platforms We will help you learn and apply AGILE methodologies and standard processes for Software Engineering You may be involved in one or more (but not limited to) of the following work - Engage in x86 firmware development using C Design, Build and Implementation of Embedded Firmware + Bootrom/HW Debug issues at the boundary of FW and HW. We will have your involvement in Waveform level analysis to root cause FW/HW issues WHO WE ARE LOOKING FOR : You are currently enrolled in a US based University in a Bachelor’s program majoring in Electrical Engineering, Computer Science, Computer Engineering, or a related field If you have knowledge or experience with any of the following technical skills (or related areas) and are enthusiastic about this role, we strongly encourage you to apply – Low level BIOS, firmware, or system software development Low level programming language C/C++ and knowledge of hardware architectures Embedded system, RTOS, and embedded controller structure Source control, debuggers, compilers and system wide debugging from software to firmware to hardware Opensource concepts VHDL/Verilog/FPGA and general hardware design concepts and process Linux development environments Architectural understanding and/or experience of graphics/compute pipelines Perforce, JIRA, Git, or similar tools Note: By submitting your application, you are indicating your interest in AMD intern positions. We are recruiting for multiple positions, and if your experience aligns with any of our intern opportunities, a recruiter will contact you. This role is not eligible for visa sponsorship. Benefits offered are described: AMD benefits at a glance . AMD does not accept unsolicited resumes from headhunters, recruitment agencies, or fee-based recruitment services. AMD and its subsidiaries are equal opportunity, inclusive employers and will consider all applicants without regard to age, ancestry, color, marital status, medical condition, mental or physical disability, national origin, race, religion, political and/or third-party affiliation, sex, pregnancy, sexual orientation, gender identity, military or veteran status, or any other characteristic protected by law. We encourage applications from all qualified candidates and will accommodate applicants’ needs under the respective laws throughout all stages of the recruitment and selection process. AMD may use Artificial Intelligence to help screen, assess or select applicants for this position. AMD’s “Responsible AI Policy” is available here. This posting is for an existing vacancy.
+What Drives Success
+As an AI Product Management & Analytics Intern, you will work alongside Product Managers, Data Scientists, Business Stakeholders, and Technology teams to identify business opportunities, define product requirements, analyze data, and help deliver AI-powered solutions that drive measurable business outcomes.
+Successful interns will have the potential opportunity of joining Lennox Full-Time upon graduation. Relocation and/or travel may be required for your position.
+Why You’ll #LoveLennox:
+Impactful Projects: Work on meaningful assignments that drive real business results. Your ideas matter here.
+Intern Community: Connect with peers through social events, team-building activities, and engagement programs.
+Innovation Exposure: Dive into cutting-edge tech and trends shaping the HVAC and manufacturing industries.
+Learning and Development: Access workshops, training sessions, and resources to level up your skills and expand your knowledge.
+Competitive Pay and Relocation Support: Receive a competitive compensation package and relocation support if needed.
+WHAT YOU'LL BE DOING: Product Management & Business Analysis
+Support product discovery activities, including stakeholder interviews, requirement gathering, and user journey mapping.
+Assist in defining MVPs, user stories, acceptance criteria, and product roadmaps for AI initiatives.
+Help document business requirements and translate them into technical solutions.
+Collaborate with business and technology teams to prioritize opportunities and drive project execution.
+Data Analytics & Insights
+Analyze business data to identify opportunities for process improvements, automation, and AI adoption.
+Develop dashboards and reports to measure adoption, business value, and operational KPIs.
+Create data visualizations and presentations that communicate insights to technical and non-technical audiences.
+Support data-driven decision-making through research, analysis, and reporting.
+Artificial Intelligence & Innovation
+Evaluate Generative AI use cases and benchmark solutions against business requirements.
+Participate in the design, testing, and rollout of AI-powered tools, including chatbots, agent-assist solutions, content generation tools, and sales enablement applications.
+Support experimentation and proof-of-concept initiatives focused on emerging AI technologies.
+Research industry trends and best practices related to AI, analytics, and digital transformation.
+User Experience & Continuous Improvement
+Conduct user research and gather feedback to support continuous product improvement.
+Assist with measuring user adoption, satisfaction, and business impact.
+Help identify opportunities to optimize processes, workflows, and customer experiences through technology.
+Support change management and communication efforts related to technology implementations.
+Team & Project Support
+Collaborate with Product Managers, Data Scientists, Developers, and Business Stakeholders on strategic initiatives.
+Present project findings and recommendations to business and technology leaders.
+Support project planning, documentation, testing, and implementation activities.
+Participate in an end-of-summer capstone project showcasing key learnings and business impact.
+WHAT WE ARE LOOKING FOR:
+Currently pursuing a Bachelor's or Master's degree in Computer Science, Data Science, Artificial Intelligence, Analytics, Business Analytics, Information Systems, Industrial Engineering, Software Engineering, Management Information Systems (MIS), or a related field
+Basic proficiency in Python, SQL, or similar analytical programming languages
+Strong analytical and problem-solving skills with the ability to interpret data and identify opportunities
+Experience using data analysis and visualization tools such as Excel, Power BI, Tableau, or similar platforms
+Understanding of AI, Machine Learning, or Generative AI concepts
+Ability to translate business requirements into technical solutions
+Strong written and verbal communication skills
+Ability to work effectively in a cross-functional team environment
+Strong attention to detail, organization, and project management skills
+Self-starter with a growth mindset and eagerness to learn new technologies
+Preferred Qualifications
+Experience with Generative AI tools and applications
+Hands-on experience with Python, SQL, Power BI, Tableau, or other analytics platforms
+Understanding of machine learning, data science, or software development fundamentals
+Exposure to product management concepts, including user stories, requirement gathering, and MVP development
+Participation in hackathons, research projects, student organizations, or leadership programs
+Experience with Microsoft 365 tools, including Excel, PowerPoint, and Teams
+WHAT YOU'LL GAIN:
+Hands-on experience with AI product management and analytics initiatives
+Exposure to Generative AI, machine learning, and digital transformation projects
+Opportunities to partner with Product Managers, Data Scientists, and business leaders
+Experience translating business challenges into technology-driven solutions
+Development of technical, analytical, communication, and product management skills
+Insight into how data and AI can drive meaningful business outcomes across a global organization
+What We Are Looking For
+Requires a high school diploma or an equivalent combination of education and experience. Entry Level.
+Developing professional knowledge in the area of expertise. Solid written and verbal communication skills. Proficient in Microsoft Office.
+What We Offer
+Compensation: This is an hourly non-exempt role. The starting pay range for this role and market is between $22.50 pay rate – $25.00/hour . This rate is based on the intern's current year in their respective university programs. Graduate students may receive a higher rate of pay based on their year in school. Employees in this role are also eligible to earn overtime when they work more than 40 hours in a week (or as otherwise required by state law).
+Our Culture: At Lennox, our Core Values of Integrity, Respect & Excellence are ingrained in the fabric of the organization. They define our culture – which is about how we do business and how we treat others. Lennox is not just a workplace; we are a global community that values each team member’s contributions. As an equal opportunity employer, we are committed to recruit, develop, and retain talented individuals from a wide range of backgrounds, ensuring that everyone has the opportunity to succeed and contribute to our continued growth and success. At Lennox, you’ll take pride in our brands, knowing you are part of something special. Come, stay, and grow with us!
+Disclaimers: The compensation and benefits information is accurate as of the date of this posting. Lennox reserves the right to modify this information at any time, with or without notice, subject to applicable law.
+We may use automated tools, including artificial intelligence, to support parts of our hiring process, such as application review and interview scheduling. These tools assist our teams but do not replace human decision-making. If you need an accommodation or have questions, please contact CandidateAccommodations@Lennox.com.
+Who We Are
+Lennox (NYSE: LII) Driven by 130 years of legacy, HVAC and refrigeration success, Lennox provides our residential and commercial customers with industry-leading climate-control solutions. At Lennox, we win as a team, aiming for excellence and delivering innovative, sustainable products and services. Our culture guides us and creates a workplace where all employees feel heard and welcomed. Lennox is a global community that values each team member’s contributions and offers a supportive environment for career development. Come, stay, and grow with us.
+Title: AI & Analytics 2027 Intern
+Company: Lennox
+Location: Richardson, TX
+Employment type: Internship
+Workplace type: Not provided
+Job description: What Drives Success
+As an AI Product Management & Analytics Intern, you will work alongside Product Managers, Data Scientists, Business Stakeholders, and Technology teams to identify business opportunities, define product requirements, analyze data, and help deliver AI-powered solutions that drive measurable business outcomes.
+Successful interns will have the potential opportunity of joining Lennox Full-Time upon graduation. Relocation and/or travel may be required for your position.
+Why You’ll #LoveLennox:
+Impactful Projects: Work on meaningful assignments that drive real business results. Your ideas matter here.
+Intern Community: Connect with peers through social events, team-building activities, and engagement programs.
+Innovation Exposure: Dive into cutting-edge tech and trends shaping the HVAC and manufacturing industries.
+Learning and Development: Access workshops, training sessions, and resources to level up your skills and expand your knowledge.
+Competitive Pay and Relocation Support: Receive a competitive compensation package and relocation support if needed.
+WHAT YOU'LL BE DOING: Product Management & Business Analysis
+Support product discovery activities, including stakeholder interviews, requirement gathering, and user journey mapping.
+Assist in defining MVPs, user stories, acceptance criteria, and product roadmaps for AI initiatives.
+Help document business requirements and translate them into technical solutions.
+Collaborate with business and technology teams to prioritize opportunities and drive project execution.
+Data Analytics & Insights
+Analyze business data to identify opportunities for process improvements, automation, and AI adoption.
+Develop dashboards and reports to measure adoption, business value, and operational KPIs.
+Create data visualizations and presentations that communicate insights to technical and non-technical audiences.
+Support data-driven decision-making through research, analysis, and reporting.
+Artificial Intelligence & Innovation
+Evaluate Generative AI use cases and benchmark solutions against business requirements.
+Participate in the design, testing, and rollout of AI-powered tools, including chatbots, agent-assist solutions, content generation tools, and sales enablement applications.
+Support experimentation and proof-of-concept initiatives focused on emerging AI technologies.
+Research industry trends and best practices related to AI, analytics, and digital transformation.
+User Experience & Continuous Improvement
+Conduct user research and gather feedback to support continuous product improvement.
+Assist with measuring user adoption, satisfaction, and business impact.
+Help identify opportunities to optimize processes, workflows, and customer experiences through technology.
+Support change management and communication efforts related to technology implementations.
+Team & Project Support
+Collaborate with Product Managers, Data Scientists, Developers, and Business Stakeholders on strategic initiatives.
+Present project findings and recommendations to business and technology leaders.
+Support project planning, documentation, testing, and implementation activities.
+Participate in an end-of-summer capstone project showcasing key learnings and business impact.
+Required skills: Not provided
+Preferred skills: Not provided
+Qualifications: Currently pursuing a Bachelor's or Master's degree in Computer Science, Data Science, Artificial Intelligence, Analytics, Business Analytics, Information Systems, Industrial Engineering, Software Engineering, Management Information Systems (MIS), or a related field
+Basic proficiency in Python, SQL, or similar analytical programming languages
+Strong analytical and problem-solving skills with the ability to interpret data and identify opportunities
+Experience using data analysis and visualization tools such as Excel, Power BI, Tableau, or similar platforms
+Understanding of AI, Machine Learning, or Generative AI concepts
+Ability to translate business requirements into technical solutions
+Strong written and verbal communication skills
+Ability to work effectively in a cross-functional team environment
+Strong attention to detail, organization, and project management skills
+Self-starter with a growth mindset and eagerness to learn new technologies
+Experience with Generative AI tools and applications
+Hands-on experience with Python, SQL, Power BI, Tableau, or other analytics platforms
+Understanding of machine learning, data science, or software development fundamentals
+Exposure to product management concepts, including user stories, requirement gathering, and MVP development
+Participation in hackathons, research projects, student organizations, or leadership programs
+Experience with Microsoft 365 tools, including Excel, PowerPoint, and Teams
+Requires a high school diploma or an equivalent combination of education and experience. Entry Level.
+Developing professional knowledge in the area of expertise. Solid written and verbal communication skills. Proficient in Microsoft Office.
+Responsibilities: Not provided
+Education requirements: Not provided
+Experience requirements: Not provided
+Benefits: Hands-on experience with AI product management and analytics initiatives
+Exposure to Generative AI, machine learning, and digital transformation projects
+Opportunities to partner with Product Managers, Data Scientists, and business leaders
+Experience translating business challenges into technology-driven solutions
+Development of technical, analytical, communication, and product management skills
+Insight into how data and AI can drive meaningful business outcomes across a global organization
+Compensation: This is an hourly non-exempt role. The starting pay range for this role and market is between $22.50 pay rate – $25.00/hour . This rate is based on the intern's current year in their respective university programs. Graduate students may receive a higher rate of pay based on their year in school. Employees in this role are also eligible to earn overtime when they work more than 40 hours in a week (or as otherwise required by state law).
+Date posted: 4 days ago
+Scrape error: Not provided

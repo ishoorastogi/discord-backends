@@ -42,6 +42,26 @@ def scrape_job_page(application_url: str) -> str:
 
 def extract_visible_text(html: str) -> str:
     soup = BeautifulSoup(html, "html.parser")
+    description = soup.select_one(".show-more-less-html__markup")
+    if description and soup.select_one(".top-card-layout__title"):
+        lines = []
+        for label, selector in (
+            ("Title", ".top-card-layout__title"),
+            ("Company", ".topcard__org-name-link"),
+            ("Location", ".topcard__flavor--bullet"),
+            ("Date posted", ".posted-time-ago__text"),
+        ):
+            element = soup.select_one(selector)
+            if element and (value := element.get_text(" ", strip=True)):
+                lines.append(f"{label}: {value}")
+        for criterion in soup.select(".description__job-criteria-item"):
+            heading = criterion.select_one(".description__job-criteria-subheader")
+            value = criterion.select_one(".description__job-criteria-text")
+            if heading and value and heading.get_text(strip=True).casefold() == "employment type":
+                lines.append(f"Employment type: {value.get_text(' ', strip=True)}")
+                break
+        return "\n".join([*lines, "Description:", _block_text(description)])
+
     structured_text = _extract_job_posting_text(soup)
     if structured_text:
         return structured_text
@@ -117,5 +137,14 @@ def _json_value_text(value: object) -> str | None:
         values = [_json_value_text(item) for item in value]
         result = "; ".join(item for item in values if item)
         return result or None
-    text = BeautifulSoup(str(value), "html.parser").get_text(" ", strip=True)
-    return re.sub(r"\s+", " ", text) or None
+    return _block_text(BeautifulSoup(str(value), "html.parser")) or None
+
+
+def _block_text(content) -> str:
+    for element in content.find_all(
+        ["br", "div", "p", "li", "h1", "h2", "h3", "h4", "h5", "h6"]
+    ):
+        element.insert_before("\n")
+        element.insert_after("\n")
+    lines = (re.sub(r"\s+", " ", line).strip() for line in content.get_text(" ").splitlines())
+    return "\n".join(line for line in lines if line)
