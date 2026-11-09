@@ -11,12 +11,12 @@ from shared.logs.log_config import get_logger
 
 logger = get_logger("resume handler")
 
-def register_handlers(router, *, resume_queue):
+def register_handlers(router, *, resume_queue, write_queue):
     router.register("PARSE", partial(handle_parse, resume_queue=resume_queue))
     router.register("EXTRACTION", partial(handle_extraction, resume_queue=resume_queue))
     router.register("NORMALIZATION", partial(handle_normalization, resume_queue=resume_queue))
     router.register("VECTORIZATION", partial(handle_vectorization, resume_queue=resume_queue))
-    # router.register("WRITE", partial(handle_send_to_writer)) #dbs write queue))
+    router.register("WRITE", partial(handle_send_to_writer, write_queue=write_queue))
 
 def handle_parse(event: dict, *, resume_queue):
     data = event.get("data")
@@ -91,6 +91,7 @@ def handle_vectorization(event: dict, *, resume_queue):
     logger.info("Handling VECTORIZATION event")
     #TODO: Implement the logic to handle the VECTORIZATION event
 
-# def handle_send_to_writer(event: dict, *): #insert dbs queue here
-#     logger.info("Handling WRITE event")
-#     #TODO: Implement the logic to handle the WRITE event
+def handle_send_to_writer(event: dict, *, write_queue):
+    logger.info("Handling WRITE event")
+    if enqueue(write_queue, event):
+        logger.info("Event sent to db writer: discord_id=%s", event.get("data", {}).get("discord_id"))

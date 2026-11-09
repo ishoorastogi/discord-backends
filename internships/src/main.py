@@ -41,6 +41,7 @@ def main() -> None:
     event_queue = import_module("event_queue")
     intake_handler = import_module("intake-handler")
     resume_handler = import_module("resume-handler")
+    writer_handler = import_module("writer-handler")
     event_router = import_module("event_router")
     tcp_listener = import_module("tcp_listener")
 
@@ -54,21 +55,25 @@ def main() -> None:
     port = settings.port
     max_size = settings.queue_max_size
     shutdown_timeout = settings.shutdown_timeout
+
     # Initialize event queue, handler registry, and event router
     intake_queue = event_queue.create_queue(max_size)
     resume_queue = event_queue.create_queue(max_size)
+    write_queue = event_queue.create_queue(max_size)
 
     registry = event_queue.HandlerRegistry()
     router = event_router.EventRouter()
 
     # Register supported event types
-    intake_handler.register_handlers(router, resume_queue=resume_queue)
-    resume_handler.register_handlers(router, resume_queue=resume_queue)
+    intake_handler.register_handlers(router, resume_queue=resume_queue, write_queue=write_queue)
+    resume_handler.register_handlers(router, resume_queue=resume_queue, write_queue=write_queue)
+    writer_handler.register_handlers(router, write_queue=write_queue)
 
     # Register the router with the event queue worker
     registry.register(partial(intake_handler.process_event, router=router))
     intake_worker = event_queue.Worker(intake_queue, registry)
     resume_worker = event_queue.Worker(resume_queue, registry)
+    writer_worker = event_queue.Worker(write_queue, registry)
 
     server = None
     stopping = threading.Event()
@@ -85,6 +90,7 @@ def main() -> None:
 
     intake_worker.start()
     resume_worker.start()
+    writer_worker.start()
 
     try:
         for attempt in range(1, listener_config.BIND_ATTEMPTS + 1):
