@@ -120,7 +120,9 @@ class EventHandler(socketserver.BaseRequestHandler):
                         self.server.event_queue,
                         event
                     )
-                    if event.get("event") == "RESUME_UPLOAD":
+                    if event.get("event") in ("RESUME_UPLOAD", "INTERNSHIP_UPLOAD", "INTERNSHIP_SUBMIT"):
+                        upload_type = "Resume" if event["event"] == "RESUME_UPLOAD" else "Internship"
+                        # Acceptance confirms intake queue admission, before handler validation.
                         response = {
                             "event": (
                                 "UPLOAD_ACCEPTED"
@@ -129,7 +131,7 @@ class EventHandler(socketserver.BaseRequestHandler):
                             ),
                             "request_id": event.get("request_id"),
                             "message": (
-                                "Resume successfully received by backend"
+                                f"{upload_type} successfully received by backend"
                                 if success
                                 else "Backend queue is full"
                             )

@@ -264,3 +264,15 @@ def test_extraction_full_queue_does_not_report_handoff(monkeypatch):
     assert pending.get_nowait() == {"event": "EXISTING"}
     assert pending.empty()
     logger.info.assert_called_once_with("Handling EXTRACTION event")
+
+
+def test_normalization_advances_to_vectorization_without_requeueing_itself():
+    pending = queue.Queue()
+    event = {"event": "NORMALIZATION", "request_id": "r1", "data": {"discord_id": "123", "resume": Resume(raw_text="text")}}
+    resume_handler.handle_normalization(event, resume_queue=pending)
+    result = pending.get_nowait()
+    assert result == {**event, "event": "VECTORIZATION"}
+    assert result["data"] is event["data"]
+    assert event["event"] == "NORMALIZATION"
+    resume_handler.handle_vectorization(result, resume_queue=pending)
+    assert pending.empty()

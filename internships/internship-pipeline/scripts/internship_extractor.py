@@ -2,7 +2,9 @@
 
 import re
 
-from models.Internship import Internship
+from importlib import import_module
+
+Internship = import_module("internships.internship-pipeline.models.Internship").Internship
 
 
 FIELD_LABELS = {

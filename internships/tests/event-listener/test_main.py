@@ -27,12 +27,12 @@ class MainTests(BaseTest):
         super().setUp()
         stack = ExitStack()
         self.addCleanup(stack.close)
-        stack.enter_context(patch.object(main.config, "load_environment"))
+        stack.enter_context(patch.object(main.listener_config, "load_environment"))
         stack.enter_context(patch.object(
-            main.config, "load_settings",
-            return_value=main.config.Settings("127.0.0.1", 12345, 10, 3),
+            main.listener_config, "load_settings",
+            return_value=main.listener_config.Settings("127.0.0.1", 12345, 10, 3),
         ))
-        stack.enter_context(patch.multiple(main.config, BIND_ATTEMPTS=3, BIND_RETRY_DELAY_SECONDS=0))
+        stack.enter_context(patch.multiple(main.listener_config, BIND_ATTEMPTS=3, BIND_RETRY_DELAY_SECONDS=0))
         self.signals = stack.enter_context(patch.object(main.signal, "signal"))
         self.server = Mock()
         self.create_server = stack.enter_context(patch.object(
@@ -70,6 +70,28 @@ class MainTests(BaseTest):
         self.process_legacy.assert_not_called()
         self.assertIn("Resume upload received: discord_id=12345", self.output.getvalue())
         self.assertNotIn("PRIVATE_RESUME_TEXT", self.output.getvalue())
+
+    def test_internship_submission_uses_worker_and_shutdown_drains_queue(self):
+        self.serve_events({
+            "event": "INTERNSHIP_SUBMIT",
+            "request_id": "internship-test",
+            "data": {"internship": {
+                "id": "i1", "title": "Intern", "company": "Example",
+                "description": "PRIVATE_INTERNSHIP_DESCRIPTION",
+            }},
+        })
+        main.main()
+        output = self.output.getvalue()
+        self.assertIn("Internship submission queued for processing", output)
+        self.assertIn("Internship posting prepared for populate", output)
+        self.assertIn("Internship populate function activated", output)
+        self.assertIn("Handling INTERNSHIP_EXTRACTION event", output)
+        self.assertIn("Handling INTERNSHIP_NORMALIZATION event", output)
+        self.assertIn("internship queue workers stopped: stopped=1 alive=0", output)
+        self.assertIn("drain completed: remaining=0", output)
+        self.assertNotIn("PRIVATE_INTERNSHIP_DESCRIPTION", output)
+        self.process_legacy.assert_not_called()
+        self.server.server_close.assert_called_once()
 
     def test_invalid_uploads_warn_and_worker_continues(self):
         invalid_payloads = [None, [], "private"]
@@ -164,6 +186,7 @@ class EntryPointTests(unittest.TestCase):
             shutil.copytree(service / "event-listener", copied_service / "event-listener")
             shutil.copytree(service / "event-managers", copied_service / "event-managers")
             shutil.copytree(service / "resume-pipeline", copied_service / "resume-pipeline")
+            shutil.copytree(service / "internship-pipeline", copied_service / "internship-pipeline")
             shutil.copytree(service.parent / "shared", root / "shared")
             (copied_src / "config.json").write_text(json.dumps({"TCP_HOST": "127.0.0.1", "TCP_PORT": 12345}))
             unrelated = root / "unrelated"

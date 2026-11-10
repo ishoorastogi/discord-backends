@@ -1,6 +1,8 @@
 """Create unpopulated internship objects from application URLs."""
 
-from models.Internship import Internship
+from importlib import import_module
+
+Internship = import_module("internships.internship-pipeline.models.Internship").Internship
 
 
 def create_internship(record: dict[str, object]) -> Internship:

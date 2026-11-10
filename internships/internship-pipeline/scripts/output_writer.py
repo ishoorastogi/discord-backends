@@ -3,7 +3,9 @@
 from dataclasses import fields
 from pathlib import Path
 
-from models.Internship import Internship
+from importlib import import_module
+
+Internship = import_module("internships.internship-pipeline.models.Internship").Internship
 
 
 OUTPUT_PATH = (
