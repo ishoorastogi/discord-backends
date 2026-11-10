@@ -186,10 +186,43 @@ GRANT SELECT, INSERT, UPDATE, DELETE
 ON finances
 TO finance_user;
 
--- Allow automatic generation of finance IDs.
+-- Locked table
+REVOKE ALL ON finances FROM PUBLIC;
+REVOKE ALL ON SEQUENCE finances_finance_id_seq FROM PUBLIC;
+
+-- ============================================================
+-- INTERNSHIP BOT PERMISSIONS
+-- ============================================================
+
+-- Allow access to the public schema.
+GRANT USAGE ON SCHEMA public TO internship_bot;
+
+-- Allow reading user information.
+GRANT SELECT
+ON users
+TO internship_bot;
+
+-- Allow management of resumes.
+GRANT SELECT, INSERT, UPDATE, DELETE
+ON resumes
+TO internship_bot;
+
+-- Allow management of internships.
+GRANT SELECT, INSERT, UPDATE, DELETE
+ON internships
+TO internship_bot;
+
+-- Allow management of matches.
+GRANT SELECT, INSERT, UPDATE, DELETE
+ON matches
+TO internship_bot;
+
+-- Allow automatic generation of internship and match IDs.
 GRANT USAGE, SELECT
-ON SEQUENCE finances_finance_id_seq
-TO finance_user;
+ON SEQUENCE
+    internships_id_seq,
+    matches_match_id_seq
+TO internship_bot;
 
 
 -- ============================================================
