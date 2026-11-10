@@ -1,30 +1,76 @@
--- Internship Bot database schema
--- Requires Postgres with the pgvector extension
+-- ============================================================
+-- TTKZ DATABASE SCHEMA
+-- PostgreSQL 17 + pgvector
+-- ============================================================
 
+-- Required extension
 CREATE EXTENSION IF NOT EXISTS vector;
 
--- Drop in reverse order of dependency so the file can be re-run while testing
-DROP TABLE IF EXISTS finances, matches, resumes, internships, users CASCADE;
+
+-- ============================================================
+-- TABLE CLEANUP
+-- ============================================================
+
+-- WARNING:
+-- Dropping tables permanently deletes their records.
+-- This schema is intended for initializing a fresh database.
+-- Use migrations to modify an existing database.
+
+DROP TABLE IF EXISTS
+    finances,
+    matches,
+    resumes,
+    internships,
+    users
+CASCADE;
+
+
+-- ============================================================
+-- USERS
+-- ============================================================
 
 CREATE TABLE users (
-    discord_id  TEXT PRIMARY KEY,
-    name        TEXT,
-    major       TEXT,
-    grad_year   INT,
-    phone       TEXT,
-    email       TEXT,
-    employer    TEXT
+    user_id             BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    discord_id          TEXT UNIQUE,
+    name                TEXT,
+    email               TEXT,
+    phone               TEXT,
+    class               TEXT,
+    major               TEXT,
+    grad_year           INT,
+    positions_held      TEXT,
+    family_line         TEXT,
+    nicknames           TEXT,
+    brotherhood_status  TEXT,
+    linkedin_link       TEXT,
+    big                 TEXT,
+    littles             TEXT[],
+    employer            TEXT
 );
 
--- Every resume field is stored as a vector
--- PLACEHOLDER: 384 must match the embedding model's dimension
+
+-- ============================================================
+-- RESUMES
+-- ============================================================
+
+-- Vector dimensions must match the embedding model.
+-- Currently using 384 dimensions.
+
 CREATE TABLE resumes (
-    discord_id   TEXT PRIMARY KEY REFERENCES users(discord_id) ON DELETE CASCADE,
+    user_id      BIGINT PRIMARY KEY
+                 REFERENCES users(user_id)
+                 ON DELETE CASCADE,
+
     resume_text  vector(384),
     skills       vector(384),
     experience   vector(384),
     education    vector(384)
 );
+
+
+-- ============================================================
+-- INTERNSHIPS
+-- ============================================================
 
 CREATE TABLE internships (
     id            SERIAL PRIMARY KEY,
@@ -35,35 +81,117 @@ CREATE TABLE internships (
     role_type     TEXT,
     requirements  TEXT,
     url           TEXT UNIQUE,
-    embedding     vector(384)  -- PLACEHOLDER: same dimension as resumes
+    embedding     vector(384)
 );
+
+
+-- ============================================================
+-- MATCHES
+-- ============================================================
 
 CREATE TABLE matches (
     match_id          SERIAL PRIMARY KEY,
-    discord_id        TEXT NOT NULL REFERENCES users(discord_id) ON DELETE CASCADE,
-    internship_id     INT  NOT NULL REFERENCES internships(id) ON DELETE CASCADE,
+
+    user_id           BIGINT NOT NULL
+                      REFERENCES users(user_id)
+                      ON DELETE CASCADE,
+
+    internship_id     INT NOT NULL
+                      REFERENCES internships(id)
+                      ON DELETE CASCADE,
+
     similarity_score  REAL,
-    UNIQUE (discord_id, internship_id)
+
+    UNIQUE (user_id, internship_id)
 );
+
+
+-- ============================================================
+-- FINANCES
+-- ============================================================
 
 CREATE TABLE finances (
     finance_id  SERIAL PRIMARY KEY,
-    discord_id  TEXT REFERENCES users(discord_id) ON DELETE SET NULL,
-    type        TEXT NOT NULL CHECK (type IN ('income', 'expense', 'dues')),
-    amount      NUMERIC(10, 2) NOT NULL CHECK (amount > 0)
+
+    user_id     BIGINT
+                REFERENCES users(user_id)
+                ON DELETE SET NULL,
+
+    type        TEXT NOT NULL
+                CHECK (type IN ('income', 'expense', 'dues')),
+
+    amount      NUMERIC(10, 2) NOT NULL
+                CHECK (amount > 0)
 );
 
--- Vector indexes for fast similarity search
+
+-- ============================================================
+-- VECTOR INDEXES
+-- ============================================================
+
+-- HNSW indexes accelerate vector similarity searches.
+
 CREATE INDEX resumes_vector_idx
-    ON resumes USING hnsw (resume_text vector_cosine_ops);
+    ON resumes
+    USING hnsw (resume_text vector_cosine_ops);
+
 CREATE INDEX internships_embedding_idx
-    ON internships USING hnsw (embedding vector_cosine_ops);
+    ON internships
+    USING hnsw (embedding vector_cosine_ops);
 
--- Open tables
+
+-- ============================================================
+-- DATABASE ACCESS CONTROL
+-- ============================================================
+
+-- Remove broad public access to application tables.
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM PUBLIC;
+
+-- Remove broad public access to sequences.
+REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM PUBLIC;
+
+
+-- ============================================================
+-- BROTHERHOOD BOT PERMISSIONS
+-- ============================================================
+
+-- Allow access to the public schema.
+GRANT USAGE ON SCHEMA public TO brotherhood_bot;
+
+-- Allow management of user records.
 GRANT SELECT, INSERT, UPDATE, DELETE
-    ON users, resumes, internships, matches TO PUBLIC;
-GRANT USAGE ON SEQUENCE internships_id_seq, matches_match_id_seq TO PUBLIC;
+ON users
+TO brotherhood_bot;
 
--- Locked table
-REVOKE ALL ON finances FROM PUBLIC;
-REVOKE ALL ON SEQUENCE finances_finance_id_seq FROM PUBLIC;
+-- Allow automatic generation of user IDs.
+GRANT USAGE, SELECT
+ON SEQUENCE users_user_id_seq
+TO brotherhood_bot;
+
+
+-- ============================================================
+-- FINANCE USER PERMISSIONS
+-- ============================================================
+
+-- Allow access to the public schema.
+GRANT USAGE ON SCHEMA public TO finance_user;
+
+-- Allow reading user information.
+GRANT SELECT
+ON users
+TO finance_user;
+
+-- Allow management of financial records.
+GRANT SELECT, INSERT, UPDATE, DELETE
+ON finances
+TO finance_user;
+
+-- Allow automatic generation of finance IDs.
+GRANT USAGE, SELECT
+ON SEQUENCE finances_finance_id_seq
+TO finance_user;
+
+
+-- ============================================================
+-- END OF SCHEMA
+-- ============================================================

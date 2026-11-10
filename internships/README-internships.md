@@ -88,6 +88,15 @@ Run all internship tests from the repository root:
 python3 -m pytest internships/tests
 ```
 
+The application-link scraping pipeline is in
+[`internship-pipeline/README.md`](internship-pipeline/README.md). Install its
+HTTP and HTML parsing dependencies, then run it from the repository root:
+
+```sh
+python3 -m pip install -r internships/internship-pipeline/requirements.txt
+python3 internships/internship-pipeline/scripts/run_pipeline.py
+```
+
 Shared logging tests remain in `shared/logs/`:
 
 ```sh
