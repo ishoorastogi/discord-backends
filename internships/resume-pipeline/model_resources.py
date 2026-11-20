@@ -17,5 +17,3 @@ def get_normalizer():
     if normalizer.extractor is None:
         logger.info("ESCO semantic layer disabled: set ESCO_CSV to enable it")
     return normalizer
-
-
