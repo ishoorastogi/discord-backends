@@ -60,13 +60,16 @@ def main() -> None:
     resume_queue = event_queue.create_queue(max_size)
     internship_queue = event_queue.create_queue(max_size)
 
+    # Retained separately for a future writer; never drained by processing workers.
+    result_queue = import_module("completion_results").get_result_queue(max_size)
+
     registry = event_queue.HandlerRegistry()
     router = event_router.EventRouter()
 
     # Register supported event types
     intake_handler.register_handlers(router, resume_queue=resume_queue, internship_queue=internship_queue)
     internship_handler.register_handlers(router, internship_queue=internship_queue)
-    resume_handler.register_handlers(router, resume_queue=resume_queue)
+    resume_handler.register_handlers(router, resume_queue=resume_queue, result_queue=result_queue)
 
     # Register the router with the event queue worker
     registry.register(partial(intake_handler.process_event, router=router))

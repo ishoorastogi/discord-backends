@@ -1,0 +1,33 @@
+canonical,aliases,ambiguous
+python,py|python3,
+javascript,js|java script|ecmascript,
+typescript,ts,
+java,,
+c++,cpp|cplusplus,
+c#,csharp|c sharp,
+c,,c
+go,golang,go
+r,,r
+sql,structured query language,
+postgresql,postgres|psql,
+mysql,,
+mongodb,mongo,
+react,reactjs|react.js,
+node.js,nodejs|node js|node,node
+flask,,
+django,,
+fastapi,,
+rest api,rest apis|restful api|restful apis|rest,rest
+machine learning,ml,
+deep learning,,
+pytorch,,
+tensorflow,,
+numpy,,
+pandas,,
+git,,
+docker,,
+aws,amazon web services,
+html,,
+css,,
+excel,microsoft excel|ms excel,
+data analysis,,

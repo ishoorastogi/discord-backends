@@ -1,0 +1,376 @@
+"""Exercise imported algorithms with a deterministic offline model."""
+from copy import deepcopy
+from functools import partial
+from importlib import import_module
+from pathlib import Path
+import queue
+import sys
+from unittest.mock import Mock
+
+import numpy as np
+import pytest
+
+ROOT = Path(__file__).resolve().parents[2]
+for directory in (ROOT, ROOT / 'internships/event-managers/handler',
+                  ROOT / 'internships/event-managers/router', ROOT / 'internships/event-listener'):
+    sys.path.insert(0, str(directory))
+
+from models import Resume, Education, Experience, Project, Skills
+from normalization_adapter import normalization_input
+import model_resources
+from normalization.normalize_resume import make_normalizer
+from normalization import esco_skills
+from vectorization import resume_vectorizer as vectorizer
+from shared import event_queue
+from event_router import EventRouter
+
+handler = import_module('resume-handler')
+
+
+@pytest.fixture(autouse=True)
+def offline(monkeypatch):
+    monkeypatch.setattr(esco_skills, 'ESCO_CSV_PATH', '')
+    model_resources.get_normalizer.cache_clear()
+    model = Mock()
+    model.encode.side_effect = lambda texts, **kwargs: np.tile(
+        np.full(384, 1 / np.sqrt(384), dtype=np.float32), (len(texts), 1))
+    monkeypatch.setattr(vectorizer, '_model', model)
+    yield model
+    model_resources.get_normalizer.cache_clear()
+
+
+def event(resume=None):
+    return {'event': 'NORMALIZATION', 'request_id': 'abc', 'data': {
+        'discord_id': '123', 'filename': 'resume.pdf',
+        'resume': resume if resume is not None else Resume('text', skills=Skills(languages=['JS']))}}
+
+
+def test_adapter_and_handoff_preserve_data():
+    resume = Resume('text', education=[Education('School', 'BS', '2025')],
+                    projects=[Project('API', skills=['Postgres'])],
+                    experience=[Experience('Engineer')], skills=Skills(languages=['JS']))
+    before = deepcopy(resume.to_dict())
+    adapted = normalization_input(resume)
+    assert adapted['skills'] == before['skills']
+    assert adapted['education'] == before['education']
+    assert 'field' not in adapted['education'][0]
+    assert 'bullets' not in adapted['experience'][0]
+    pending = queue.Queue()
+    original = event(resume)
+    handler.handle_normalization(original, resume_queue=pending)
+    result = pending.get_nowait()
+    assert result['event'] == 'VECTORIZATION'
+    assert result['request_id'] == 'abc'
+    assert result['data'] is original['data']
+    assert result['data']['normalized_resume']['skills'] == ['javascript']
+    assert result['data']['normalized_resume']['projects'][0]['skills'] == ['postgresql']
+    normalized = result['data']['normalized_resume']
+    snapshot = deepcopy(normalized)
+    handler.handle_vectorization(result, resume_queue=pending)
+    assert result['data']['normalized_resume'] is normalized
+    assert normalized == snapshot
+    assert result['data']['resume'] is resume
+    assert resume.to_dict() == before
+    assert set(result['data']['resume_vectors']) == {'skills', 'titles', 'experience', 'projects', 'education', 'overall'}
+    for vector in result['data']['resume_vectors'].values():
+        assert vector.shape == (384,)
+        assert vector.dtype == np.float32
+        assert np.linalg.norm(vector) == pytest.approx(1)
+    assert pending.empty()
+
+
+def test_optional_fields_and_empty_resume(offline):
+    original = event(Resume(''))
+    pending = queue.Queue()
+    handler.handle_normalization(original, resume_queue=pending)
+    result = pending.get_nowait()
+    handler.handle_vectorization(result, resume_queue=pending)
+    assert 'resume_vectors' not in result['data']
+    offline.encode.assert_not_called()
+
+
+@pytest.mark.parametrize('data', [None, [], {}, {'discord_id': 'bad', 'resume': Resume('')},
+                                      {'discord_id': '123', 'resume': {}}])
+def test_invalid_payloads(data):
+    pending = queue.Queue()
+    for function in (handler.handle_normalization, handler.handle_vectorization):
+        function({'data': data}, resume_queue=pending)
+    assert pending.empty()
+
+
+def test_full_queue(monkeypatch):
+    model_resources.get_normalizer()
+    pending = queue.Queue(1)
+    pending.put('existing')
+    logger = Mock()
+    monkeypatch.setattr(handler, 'logger', logger)
+    handler.handle_normalization(event(), resume_queue=pending)
+    assert pending.get_nowait() == 'existing'
+    assert pending.empty()
+    logger.info.assert_not_called()
+
+
+def test_configured_esco_failure_is_not_fallback(monkeypatch):
+    monkeypatch.setattr(esco_skills, 'ESCO_CSV_PATH', '/missing/esco.csv')
+    with pytest.raises(OSError):
+        make_normalizer()
+    pending = queue.Queue()
+    original = event()
+    handler.handle_normalization(original, resume_queue=pending)
+    assert pending.empty()
+    assert 'normalized_resume' not in original['data']
+
+
+def test_normalizer_reused():
+    assert model_resources.get_normalizer() is model_resources.get_normalizer()
+
+
+@pytest.mark.parametrize('invalid', [np.zeros(384, dtype=np.float32), np.ones(12, dtype=np.float32),
+                                     np.full(384, np.nan, dtype=np.float32)])
+def test_invalid_vectors_not_published(monkeypatch, invalid):
+    original = event()
+    original['data']['normalized_resume'] = {'skills': ['python']}
+    monkeypatch.setattr(vectorizer, 'vectorize_resume', lambda data: {'overall': invalid})
+    handler.handle_vectorization(original, resume_queue=queue.Queue())
+    assert 'resume_vectors' not in original['data']
+
+
+def test_vectorizer_receives_original_normalized_dict(monkeypatch):
+    original = event()
+    normalized = {'skills': ['python']}
+    original['data']['normalized_resume'] = normalized
+    mock = Mock(side_effect=RuntimeError('model failed'))
+    monkeypatch.setattr(vectorizer, 'vectorize_resume', mock)
+    handler.handle_vectorization(original, resume_queue=queue.Queue())
+    assert mock.call_args.args[0] is normalized
+    assert 'resume_vectors' not in original['data']
+
+
+def test_real_worker_pipeline_dispatches_once(monkeypatch):
+    # Match main's shared registry/router wiring, including the intake worker.
+    intake = import_module('intake-handler')
+    intake_queue, resume_queue = queue.Queue(), queue.Queue()
+    router = EventRouter()
+    intake.register_handlers(router, resume_queue=resume_queue, internship_queue=queue.Queue())
+    handler.register_handlers(router, resume_queue=resume_queue)
+    stages = []
+    processed = []
+    for name, function in list(router._handlers.items()):
+        def record(event, name=name, function=function):
+            stages.append(name)
+            processed.append(event)
+            function(event)
+        router.register(name, record)
+    resume = Resume('SKILLS\nProgramming Languages: Python\nPROJECTS\nAPI | Python')
+    monkeypatch.setattr(handler, 'parse_resume_base64', lambda _: resume)
+    registry = event_queue.HandlerRegistry()
+    registry.register(partial(intake.process_event, router=router))
+    workers = [event_queue.Worker(intake_queue, registry), event_queue.Worker(resume_queue, registry)]
+    original = {'event': 'RESUME_UPLOAD', 'request_id': 'abc',
+                'data': {'discord_id': '123', 'pdf_base64': 'mock'}}
+    for worker in workers:
+        worker.start()
+    try:
+        intake_queue.put(original)
+        assert event_queue.drain(intake_queue, 3) == 0
+        assert event_queue.drain(resume_queue, 3) == 0
+        assert stages == ['RESUME_UPLOAD', 'PARSE', 'EXTRACTION', 'NORMALIZATION', 'VECTORIZATION']
+        assert resume.skills.languages == ['Python']
+        final = processed[-1]
+        assert final['request_id'] == 'abc'
+        assert final['data']['resume'] is resume
+        assert set(final['data']) >= {'resume', 'normalized_resume', 'resume_vectors'}
+    finally:
+        assert event_queue.stop_workers(intake_queue, workers[:1], 3) == 0
+        assert event_queue.stop_workers(resume_queue, workers[1:], 3) == 0
+
+
+def test_semantic_layer_remains_available():
+    from normalization.skill_normalizer import SkillNormalizer
+    from normalization.normalize_resume import normalize_resume
+    extractor = esco_skills.EscoSkillExtractor(
+        skills=[{'label': 'Special skill', 'uri': 'urn:skill'}], cache_dir=None,
+        embed_fn=lambda texts: np.ones((len(texts), 1), dtype=np.float32))
+    normalized = normalize_resume({'skills': ['unknown phrase']}, SkillNormalizer(extractor=extractor))
+    assert normalized['skills'] == ['Special skill']
+
+
+def test_minilm_loaded_once(monkeypatch):
+    import types
+    factory = Mock()
+    monkeypatch.setitem(sys.modules, 'sentence_transformers', types.SimpleNamespace(SentenceTransformer=factory))
+    monkeypatch.setattr(vectorizer, '_model', None)
+    first = vectorizer.get_model()
+    assert vectorizer.get_model() is first
+    factory.assert_called_once_with(vectorizer.MODEL_NAME)
+
+
+def test_main_workers_run_complete_pipeline(monkeypatch):
+    from internships.src import main
+    tcp_listener = import_module('tcp_listener')
+    config = main.listener_config
+    monkeypatch.setattr(config, 'load_environment', lambda: None)
+    monkeypatch.setattr(config, 'load_settings', lambda: config.Settings('127.0.0.1', 12345, 10, 3))
+    monkeypatch.setattr(main.signal, 'signal', lambda *args: None)
+    resume = Resume('SKILLS\nProgramming Languages: Python')
+    monkeypatch.setattr(handler, 'parse_resume_base64', lambda _: resume)
+    completed = []
+    vectorize = handler.handle_vectorization
+
+    def capture(event, *, resume_queue, result_queue=None):
+        vectorize(event, resume_queue=resume_queue, result_queue=result_queue)
+        completed.append(event)
+
+    monkeypatch.setattr(handler, 'handle_vectorization', capture)
+    server = Mock()
+
+    def create_server(host, port, intake_queue):
+        server.serve_forever.side_effect = lambda: intake_queue.put({
+            'event': 'RESUME_UPLOAD', 'request_id': 'main-test',
+            'data': {'discord_id': '123', 'pdf_base64': 'mock'}})
+        return server
+
+    monkeypatch.setattr(tcp_listener, 'create_server', create_server)
+    monkeypatch.setattr(tcp_listener, 'close_clients', lambda *args: 0)
+    main.main()
+    assert len(completed) == 1
+    assert completed[0]['request_id'] == 'main-test'
+    assert completed[0]['data']['resume'] is resume
+    assert set(completed[0]['data']) >= {'resume', 'normalized_resume', 'resume_vectors'}
+    server.server_close.assert_called_once()
+
+
+def test_completion_survives_subsequent_worker_events():
+    from functools import partial
+    results = queue.Queue(2)
+    pending = event_queue.create_queue(4)
+    router = EventRouter()
+    handler.register_handlers(router, resume_queue=pending, result_queue=results)
+    router.register('NEXT', lambda event: None)
+    registry = event_queue.HandlerRegistry()
+    registry.register(router.route)
+    worker = event_queue.Worker(pending, registry)
+    resumes = [Resume('first'), Resume('second')]
+    worker.start()
+    try:
+        for i, resume in enumerate(resumes):
+            pending.put({'event': 'VECTORIZATION', 'request_id': str(i), 'source': 'test',
+                         'data': {'discord_id': '123', 'resume': resume,
+                                  'normalized_resume': {'skills': ['python']}}})
+        pending.put({'event': 'NEXT'})
+        assert event_queue.drain(pending, 3) == 0
+        assert results.qsize() == 2
+        for i, resume in enumerate(resumes):
+            result = results.get_nowait()
+            assert result['event'] == 'VECTORIZATION_COMPLETE'
+            assert result['request_id'] == str(i)
+            assert result['source'] == 'test'
+            assert result['data']['discord_id'] == '123'
+            assert result['data']['resume'] is resume
+            assert result['data']['normalized_resume'] == {'skills': ['python']}
+            assert result['data']['resume_vectors']['overall'].shape == (384,)
+            results.task_done()
+    finally:
+        assert event_queue.stop_workers(pending, [worker], 3) == 0
+
+
+def test_full_completion_queue_does_not_report_delivery(monkeypatch):
+    results = queue.Queue(1)
+    results.put('existing')
+    original = event()
+    original['data']['normalized_resume'] = {'skills': ['python']}
+    logger = Mock()
+    monkeypatch.setattr(handler, 'logger', logger)
+    handler.handle_vectorization(original, resume_queue=queue.Queue(), result_queue=results)
+    assert results.get_nowait() == 'existing'
+    assert results.empty()
+    logger.info.assert_not_called()
+    logger.warning.assert_called_once()
+
+
+def test_distinct_vectors_average_and_renormalize(monkeypatch):
+    def embed(texts):
+        vectors = np.zeros((len(texts), 384), dtype=np.float32)
+        for i in range(len(texts)):
+            vectors[i, i] = 1
+        return vectors
+    monkeypatch.setattr(vectorizer, 'embed_texts', embed)
+    vectors = vectorizer.vectorize_resume({'projects': [{'name': 'One'}, {'name': 'Two'}]})
+    expected = np.zeros(384, dtype=np.float32)
+    expected[:2] = 1 / np.sqrt(2)
+    np.testing.assert_allclose(vectors['projects'], expected, atol=1e-6)
+    assert set(vectors) == {'projects', 'overall'}
+    assert vectorizer.build_section_texts({'skills': [], 'education': []}) == {}
+
+
+def test_configured_esco_inference_failure_recovers(monkeypatch):
+    from normalization.skill_normalizer import SkillNormalizer
+    extractor = esco_skills.EscoSkillExtractor(
+        skills=[{'label': 'Special skill', 'uri': 'urn:skill'}], cache_dir=None,
+        embed_fn=Mock(side_effect=RuntimeError('model failed')))
+    normalizer = SkillNormalizer(extractor=extractor)
+    normalize_module = import_module('normalization.normalize_resume')
+    monkeypatch.setattr(normalize_module, 'make_normalizer', lambda: normalizer)
+    pending = queue.Queue()
+    original = event(Resume('text', skills=Skills(other=['unknown phrase'])))
+    handler.handle_normalization(original, resume_queue=pending)
+    assert pending.empty()
+    assert 'normalized_resume' not in original['data']
+    extractor._embed_fn = lambda texts: np.ones((len(texts), 1), dtype=np.float32)
+    handler.handle_normalization(original, resume_queue=pending)
+    assert pending.get_nowait()['data']['normalized_resume']['skills'] == ['Special skill']
+
+
+def test_esco_default_never_writes_source_directory(monkeypatch):
+    from pathlib import Path
+    import runpy
+    monkeypatch.delenv('ESCO_CACHE_DIR', raising=False)
+    module = runpy.run_path(esco_skills.__file__)
+    assert module['CACHE_DIR'] is None
+    monkeypatch.setattr(Path, 'mkdir', Mock(side_effect=PermissionError('read-only source')))
+    extractor = module['EscoSkillExtractor'](
+        skills=[{'label': 'Special skill', 'uri': 'urn:skill'}],
+        embed_fn=lambda texts: np.ones((len(texts), 1), dtype=np.float32))
+    assert extractor.extract(['synthetic'])[0][0].label == 'Special skill'
+    Path.mkdir.assert_not_called()
+
+
+def test_result_queue_public_interface_is_bounded_and_retained(monkeypatch):
+    import completion_results
+    monkeypatch.setattr(completion_results, '_result_queue', None)
+    results = completion_results.get_result_queue(2)
+    results.put_nowait('completed')
+    assert completion_results.get_result_queue() is results
+    assert results.maxsize == 2
+    assert results.get_nowait() == 'completed'
+    results.task_done()
+
+
+def test_esco_external_cache_directory(monkeypatch, tmp_path):
+    import runpy
+    monkeypatch.setenv('ESCO_CACHE_DIR', str(tmp_path))
+    module = runpy.run_path(esco_skills.__file__)
+    assert module['CACHE_DIR'] == str(tmp_path)
+    extractor = module['EscoSkillExtractor'](
+        skills=[{'label': 'Special skill', 'uri': 'urn:skill'}],
+        embed_fn=lambda texts: np.ones((len(texts), 1), dtype=np.float32))
+    assert extractor.extract(['synthetic'])[0][0].label == 'Special skill'
+    assert len(list(tmp_path.glob('*.npy'))) == 1
+
+
+def test_resource_initialization_is_lazy_cached_and_clearable(monkeypatch):
+    import runpy
+    module = import_module('normalization.normalize_resume')
+    factory = Mock(side_effect=lambda: Mock(extractor=None))
+    monkeypatch.setattr(module, 'make_normalizer', factory)
+    # Import/module evaluation alone must not construct expensive resources.
+    namespace = runpy.run_path(model_resources.__file__)
+    factory.assert_not_called()
+    getter = namespace['get_normalizer']
+    first = getter()
+    assert getter() is first
+    factory.assert_called_once_with()
+    assert getter.cache_info().maxsize == 1
+    getter.cache_clear()
+    assert getter() is not first
+    assert factory.call_count == 2

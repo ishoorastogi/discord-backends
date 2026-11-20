@@ -1,0 +1,7 @@
+# Demo runtime artifacts must never be committed.
+*.pdf
+*.png
+*.npy
+*.npz
+*.log
+__pycache__/

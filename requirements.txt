@@ -2,3 +2,5 @@ python-dotenv>=1.0,<2.0
 
 # Internship job-page fetching and HTML parsing.
 -r internships/internship-pipeline/requirements.txt
+numpy>=1.23
+sentence-transformers>=2.2

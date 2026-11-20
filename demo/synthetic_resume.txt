@@ -1,0 +1,20 @@
+Avery Example
+Synthetic Software Engineering Resume - Fictitious Details
+
+EDUCATION
+Example University | BS in Computer Science | May 2025
+
+SKILLS
+Programming Languages: Python, JS, SQL
+Frameworks: Flask
+Databases: Postgres
+
+EXPERIENCE
+Backend Developer | Fictional Systems | Jan 2024 - Dec 2024
+- Built backend services for a fictitious product.
+
+PROJECTS
+REST API | Python, Flask, Postgres, SQL | Jan 2024 - Mar 2024
+- Built a REST API with synthetic records.
+Web Application | JS, Python, Flask | Apr 2024 - Jun 2024
+- Built a web application for fictional users.
