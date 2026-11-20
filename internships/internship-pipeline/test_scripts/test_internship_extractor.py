@@ -6,10 +6,14 @@ import sys
 
 
 PIPELINE_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(PIPELINE_ROOT))
+sys.path.insert(0, str(PIPELINE_ROOT.parents[1]))
 
-from models.Internship import Internship
-from scripts.internship_extractor import extract_internship_data
+from importlib import import_module
+
+Internship = import_module("internships.internship-pipeline.models.Internship").Internship
+extract_internship_data = import_module(
+    "internships.internship-pipeline.scripts.internship_extractor"
+).extract_internship_data
 
 
 # Replace this text to try a different posting without running the scraper.
@@ -63,7 +67,9 @@ if __name__ == "__main__":
     parser.add_argument("--url", help="Fetch a real posting instead of using sample text.")
     args = parser.parse_args()
     if args.url:
-        from scripts.job_page_scraper import scrape_job_page
+        scrape_job_page = import_module(
+            "internships.internship-pipeline.scripts.job_page_scraper"
+        ).scrape_job_page
 
         internship = Internship(
             application_url=args.url,

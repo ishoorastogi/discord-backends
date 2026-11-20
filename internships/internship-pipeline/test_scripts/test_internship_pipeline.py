@@ -1,5 +1,6 @@
 """Test URL-only internship creation and report replacement."""
 
+from importlib import import_module
 import json
 import requests
 import sys
@@ -10,18 +11,26 @@ from unittest.mock import patch
 
 
 PIPELINE_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(PIPELINE_ROOT))
+sys.path.insert(0, str(PIPELINE_ROOT.parents[1]))
 
-from models.Internship import Internship
-from scripts.internship_extractor import extract_internship_data
-from scripts.internship_factory import create_internships
-from scripts.job_page_scraper import extract_visible_text
-from scripts.output_writer import write_internship_report
-from scripts.sample_data_loader import (
-    SAMPLE_INTERNSHIPS_PATH,
-    load_sample_internships,
-)
-from scripts.run_pipeline import run_pipeline
+Internship = import_module("internships.internship-pipeline.models.Internship").Internship
+extract_internship_data = import_module(
+    "internships.internship-pipeline.scripts.internship_extractor"
+).extract_internship_data
+create_internships = import_module(
+    "internships.internship-pipeline.scripts.internship_factory"
+).create_internships
+extract_visible_text = import_module(
+    "internships.internship-pipeline.scripts.job_page_scraper"
+).extract_visible_text
+write_internship_report = import_module(
+    "internships.internship-pipeline.scripts.output_writer"
+).write_internship_report
+sample_data_loader = import_module("internships.internship-pipeline.scripts.sample_data_loader")
+SAMPLE_INTERNSHIPS_PATH = sample_data_loader.SAMPLE_INTERNSHIPS_PATH
+load_sample_internships = sample_data_loader.load_sample_internships
+pipeline = import_module("internships.internship-pipeline.scripts.run_pipeline")
+run_pipeline = pipeline.run_pipeline
 
 
 class InternshipPipelineTests(unittest.TestCase):
@@ -163,12 +172,12 @@ class InternshipPipelineTests(unittest.TestCase):
                 return create_internships(load_sample_internships(path))
 
             with (
-                patch(
-                    "scripts.run_pipeline.create_sample_internships",
+                patch.object(
+                    pipeline, "create_sample_internships",
                     side_effect=create_after_output_was_cleared,
                 ),
-                patch(
-                    "scripts.run_pipeline.scrape_job_page",
+                patch.object(
+                    pipeline, "scrape_job_page",
                     return_value="Firmware Intern\nBuild embedded systems.",
                 ) as scrape,
             ):
@@ -191,8 +200,8 @@ class InternshipPipelineTests(unittest.TestCase):
             input_path = Path(temporary_directory) / "sample.json"
             output_path = Path(temporary_directory) / "report.txt"
             input_path.write_text(json.dumps(records), encoding="utf-8")
-            with patch(
-                "scripts.run_pipeline.scrape_job_page",
+            with patch.object(
+                pipeline, "scrape_job_page",
                 side_effect=[requests.RequestException("unavailable"), "Second job"],
             ):
                 run_pipeline(input_path, output_path)

@@ -1,5 +1,3 @@
-"""Fetch an application page and return its visible HTML text as a string."""
-
 """Fetch an application page and return its job-posting text as a string."""
 
 import json

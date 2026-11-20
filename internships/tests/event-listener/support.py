@@ -9,7 +9,7 @@ from unittest.mock import patch
 from shared.logs import log_config
 
 
-LOGGER_NAMES = ("event_queue", "test_logging", "processor", "tcp_listener", "event_router", "main")
+LOGGER_NAMES = ("event_queue", "test_logging", "processor", "tcp_listener", "event_router", "main", "intake handler", "resume handler", "internship handler")
 
 
 def reset_logging():
