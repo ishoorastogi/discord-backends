@@ -11,7 +11,6 @@ logger = get_logger("intake handler")
 def register_handlers(router, *, resume_queue, internship_queue):
     router.register("RESUME_UPLOAD", partial(handle_resume_upload, resume_queue=resume_queue))
     router.register("INTERNSHIP_UPLOAD", partial(handle_internship_upload, internship_queue=internship_queue))
-    router.register("INTERNSHIP_SUBMIT", partial(handle_internship_upload, internship_queue=internship_queue))
 
 def handle_resume_upload(event: dict, *, resume_queue) -> None:
     data = event.get("data")
