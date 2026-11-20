@@ -7,6 +7,7 @@ echo "[INFO] Initializing PostgreSQL roles..."
 : "${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}"
 : "${BROTHERHOOD_BOT_PASSWORD:?BROTHERHOOD_BOT_PASSWORD is required}"
 : "${FINANCE_USER_PASSWORD:?FINANCE_USER_PASSWORD is required}"
+: "${INTERNSHIP_BOT_PASSWORD:?INTERNSHIP_BOT_PASSWORD is required}"
 
 psql \
     -v ON_ERROR_STOP=1 \
@@ -14,7 +15,8 @@ psql \
     --dbname "$POSTGRES_DB" \
     -v admin_password="$ADMIN_PASSWORD" \
     -v brotherhood_password="$BROTHERHOOD_BOT_PASSWORD" \
-    -v finance_password="$FINANCE_USER_PASSWORD" <<'SQL'
+    -v finance_password="$FINANCE_USER_PASSWORD" \
+    -v internship_password="$INTERNSHIP_BOT_PASSWORD" <<'SQL'
 
 -- Administrator
 SELECT format(
@@ -43,6 +45,16 @@ SELECT format(
 )
 WHERE NOT EXISTS (
     SELECT 1 FROM pg_roles WHERE rolname = 'finance_user'
+)
+\gexec
+
+-- Internship backend
+SELECT format(
+    'CREATE ROLE internship_bot WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE PASSWORD %L',
+    :'internship_password'
+)
+WHERE NOT EXISTS (
+    SELECT 1 FROM pg_roles WHERE rolname = 'internship_bot'
 )
 \gexec
 
