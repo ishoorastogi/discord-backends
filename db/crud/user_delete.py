@@ -1,6 +1,6 @@
 """Delete a user by name (Python version of the Node.js delete file)."""
-from crud.query import with_transaction
-from crud.user_queries import (
+from db.crud.query import with_transaction
+from db.crud.user_queries import (
     MemberChangedError,
     matching_users_query,
     unique_user,

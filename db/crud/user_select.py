@@ -3,8 +3,8 @@
 Pass username and password to run as a specific database role. Leave them out
 to use the default account from .env.
 """
-from crud.query import query_rows
-from crud.user_queries import matching_users_query
+from db.crud.query import query_rows
+from db.crud.user_queries import matching_users_query
 
 
 async def select_users_by_name(name, username=None, password=None):

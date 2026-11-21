@@ -14,11 +14,11 @@ import sys
 
 import asyncpg
 
-from crud import Connection
-from crud.query import query_rows
-from crud.user_delete import delete_user_by_name
-from crud.user_insert import insert_user, insert_users, upsert_user
-from crud.user_queries import (
+from db.crud import Connection
+from db.crud.query import query_rows
+from db.crud.user_delete import delete_user_by_name
+from db.crud.user_insert import insert_user, insert_users, upsert_user
+from db.crud.user_queries import (
     AmbiguousUserError,
     MemberChangedError,
     insert_query,
@@ -26,13 +26,13 @@ from crud.user_queries import (
     unique_user,
     user_fields,
 )
-from crud.user_select import (
+from db.crud.user_select import (
     select_user_by_discord_id,
     select_user_by_id,
     select_users_by_name,
     select_users_by_name_or_nickname,
 )
-from crud.user_update import update_user_by_name
+from db.crud.user_update import update_user_by_name
 
 failures = []
 
