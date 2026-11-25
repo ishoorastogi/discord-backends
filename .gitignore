@@ -51,6 +51,7 @@ junit.xml
 # Uploaded resumes; retain the directory placeholder.
 /internships/data/uploads/*
 !/internships/data/uploads/.gitkeep
+/internships/data/esco/cache/*
 
 # Local editor settings and temporary files.
 .idea/
