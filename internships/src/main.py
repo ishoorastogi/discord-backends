@@ -6,13 +6,14 @@ import sys
 import threading
 import time
 
-# Make listener modules, event managers, and shared utilities available when run directly.
+# Make service modules and shared utilities available when run directly.
 SERVICE_DIR = Path(__file__).resolve().parent.parent
 SHARED_DIR = SERVICE_DIR.parent / "shared"
 for module_dir in (
     SERVICE_DIR / "event-listener",
     SERVICE_DIR / "resume-pipeline" / "resume-parser",
     SERVICE_DIR / "resume-pipeline",
+    SERVICE_DIR / "int-res-shared",
     SERVICE_DIR.parent,
     SHARED_DIR,
     SERVICE_DIR / "event-managers" / "router",

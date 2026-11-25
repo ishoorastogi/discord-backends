@@ -50,6 +50,9 @@ cd "$PROJECT_ROOT"
     --editable "$PROJECT_ROOT/internships/resume-pipeline/resume-parser[dev]" \
     --editable "$PROJECT_ROOT/internships/resume-pipeline/extraction[dev]"
 
+# Verify the scraper dependency in the interpreter used to start the backend.
+"$VENV_PYTHON" -c 'from bs4 import BeautifulSoup'
+
 ENV_FILE="$PROJECT_ROOT/internships/src/.env"
 if [[ ! -e "$ENV_FILE" && ! -L "$ENV_FILE" ]]; then
     (umask 077; cp "$PROJECT_ROOT/internships/src/.env.example" "$ENV_FILE")

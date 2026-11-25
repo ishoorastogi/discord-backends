@@ -37,10 +37,12 @@ python3 internships/test-scripts/parse_resume.py /path/to/resume.pdf | python3 i
 
 `src/main.py` coordinates the backend. Its processor and TCP listener modules live
 in `event-listener/`, and its event router and handlers live in `event-managers/`.
+The [normalization](int-res-shared/normalization/) and
+[vectorization](int-res-shared/vectorization/) modules live in `int-res-shared/`.
 The queue and logging utilities live in `../shared/`. Service tests live in
 `tests/event-listener/`. The entry point adds the listener, router, handler,
-resume pipeline, parser, and shared directories to Python's import path so these
-modules can be imported by name.
+resume pipeline, parser, `int-res-shared`, and `../shared` directories to Python's
+import path so these modules can be imported by name.
 
 After setup, run from the repository root:
 

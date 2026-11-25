@@ -1,6 +1,18 @@
+# Environment configuration.
 python-dotenv>=1.0,<2.0
 
+# PostgreSQL access and vector codecs.
+asyncpg>=0.30.0
+pgvector>=0.3.6
+
 # Internship job-page fetching and HTML parsing.
--r internships/internship-pipeline/requirements.txt
+beautifulsoup4>=4.12,<5
+requests>=2.31,<3
+
+# Resume parsing, normalization, and vectorization.
+pypdf>=4.0
 numpy>=1.23
-sentence-transformers>=2.2
+sentence-transformers>=2.3.0
+
+# Repository tests.
+pytest>=8.0

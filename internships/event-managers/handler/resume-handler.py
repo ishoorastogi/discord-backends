@@ -17,9 +17,11 @@ def register_handlers(router, *, resume_queue, result_queue=None):
     router.register("EXTRACTION", partial(handle_extraction, resume_queue=resume_queue))
     router.register("NORMALIZATION", partial(handle_normalization, resume_queue=resume_queue))
     router.register("VECTORIZATION", partial(handle_vectorization, resume_queue=resume_queue, result_queue=result_queue))
-    # router.register("WRITE", partial(handle_send_to_writer)) #dbs write queue))
+    router.register("WRITE", partial(handle_send_to_writer))
 
 def handle_parse(event: dict, *, resume_queue):
+    logger.info("Handling PARSE event")
+
     data = event.get("data")
 
     if not isinstance(data, dict):
@@ -97,6 +99,7 @@ def _valid_resume_data(event):
 
 
 def handle_normalization(event: dict, *, resume_queue):
+    logger.info("Handling NORMALIZATION event")
     data = _valid_resume_data(event)
     if data is None:
         logger.warning("Invalid normalization payload")
@@ -123,6 +126,7 @@ def handle_normalization(event: dict, *, resume_queue):
 
 
 def handle_vectorization(event: dict, *, resume_queue, result_queue=None):
+    logger.info("Handling VECTORIZATION event")
     data = _valid_resume_data(event)
     if data is None or not isinstance(data.get("normalized_resume"), dict):
         logger.warning("Invalid vectorization payload")
@@ -154,6 +158,6 @@ def handle_vectorization(event: dict, *, resume_queue, result_queue=None):
     logger.info("Resume completion delivered: discord_id=%s request_id=%s",
                 data["discord_id"], event.get("request_id"))
 
-# def handle_send_to_writer(event: dict, *): #insert dbs queue here
-#     logger.info("Handling WRITE event")
-#     #TODO: Implement the logic to handle the WRITE event
+def handle_send_to_writer(event: dict, *): #insert dbs queue here
+    logger.info("Handling WRITE event")
+    #TODO: Implement the logic to handle the WRITE event
