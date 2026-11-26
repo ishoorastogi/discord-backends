@@ -51,6 +51,7 @@ class Resume:
     projects_vector: list[float] | None = field(default=None, repr=False)
     education_vector: list[float] | None = field(default=None, repr=False)
     overall_vector: list[float] | None = field(default=None, repr=False)
+    name: str | None = field(default=None, repr=False)
 
     def to_dict(self) -> dict:
         """Serialize at JSON or storage boundaries, outside the event pipeline."""

@@ -57,6 +57,7 @@ def parse_event(pdf_bytes):
 def test_parse_and_extraction_keep_the_same_resume_instance(pdf_bytes, monkeypatch):
     pending = queue.Queue()
     event = parse_event(pdf_bytes)
+    event["data"]["name"] = "  Example Candidate  "
     parser = resume_parser.parse_resume_pdf
     parsed_paths = []
     parsed_resumes = []
@@ -88,11 +89,14 @@ def test_parse_and_extraction_keep_the_same_resume_instance(pdf_bytes, monkeypat
     assert "resume" not in event["data"]
     assert not parsed_paths[0].parent.exists()
     assert "Private resume text" not in str(logger.mock_calls)
+    assert "Example Candidate" not in str(logger.mock_calls)
 
     resume_handler.handle_extraction(result, resume_queue=pending)
     normalization_event = pending.get_nowait()
     assert normalization_event["event"] == "NORMALIZATION"
     assert normalization_event["data"]["resume"] is parsed_resumes[0]
+    assert parsed_resumes[0].name == "Example Candidate"
+    assert parsed_resumes[0].to_dict()["name"] == "Example Candidate"
     assert normalization_event["data"] is result["data"]
 
 
@@ -153,7 +157,7 @@ def test_full_queue_does_not_report_success(pdf_bytes, monkeypatch):
 
     assert pending.get_nowait() == {"event": "EXISTING"}
     assert pending.empty()
-    logger.info.assert_not_called()
+    logger.info.assert_called_once_with("Handling PARSE event")
 
 
 def test_extraction_enriches_the_same_resume_and_preserves_metadata(monkeypatch):
@@ -274,5 +278,7 @@ def test_normalization_advances_to_vectorization_without_requeueing_itself():
     assert result == {**event, "event": "VECTORIZATION"}
     assert result["data"] is event["data"]
     assert event["event"] == "NORMALIZATION"
-    resume_handler.handle_vectorization(result, resume_queue=pending)
+    writer_queue = queue.Queue()
+    resume_handler.handle_vectorization(result, writer_queue=writer_queue)
     assert pending.empty()
+    assert writer_queue.empty()

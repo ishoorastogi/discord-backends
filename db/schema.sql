@@ -61,10 +61,12 @@ CREATE TABLE resumes (
                  REFERENCES users(user_id)
                  ON DELETE CASCADE,
 
-    resume_text  vector(384),
-    skills       vector(384),
-    experience   vector(384),
-    education    vector(384)
+    skills_vector VECTOR(384),
+    titles_vector VECTOR(384),
+    experience_vector VECTOR(384),
+    projects_vector VECTOR(384),
+    education_vector VECTOR(384),
+    overall_vector VECTOR(384)
 );
 
 
@@ -133,7 +135,7 @@ CREATE TABLE finances (
 
 CREATE INDEX resumes_vector_idx
     ON resumes
-    USING hnsw (resume_text vector_cosine_ops);
+    USING hnsw (overall_vector vector_cosine_ops);
 
 CREATE INDEX internships_embedding_idx
     ON internships

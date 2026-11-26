@@ -1,4 +1,6 @@
+import asyncio
 from contextlib import ExitStack
+from importlib import import_module
 import json
 import os
 from pathlib import Path
@@ -9,7 +11,9 @@ import sys
 import tempfile
 import threading
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
+
+import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "event-listener"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
@@ -70,6 +74,101 @@ class MainTests(BaseTest):
         self.process_legacy.assert_not_called()
         self.assertIn("Resume upload received: discord_id=12345", self.output.getvalue())
         self.assertNotIn("PRIVATE_RESUME_TEXT", self.output.getvalue())
+
+    def test_writer_survives_database_failure_and_drains_its_queue(self):
+        resume_handler = import_module("resume-handler")
+        writer_handler = import_module("writer-handler")
+        connection = import_module("shared.db-utils.crud.Connection")
+        vectorizer = import_module("vectorization.resume_vectorizer")
+        vector = np.zeros(384, dtype=np.float32)
+        vector[0] = 1
+        attempts = []
+        commits = []
+        pool_closed_on = []
+
+        async def close_pool():
+            pool_closed_on.append((threading.current_thread(), asyncio.get_running_loop()))
+
+        async def commit(*exc):
+            self.assertIsNone(exc[0])
+            self.assertNotIn("Resume successfully written", self.output.getvalue())
+            commits.append(True)
+
+        transaction = AsyncMock()
+        transaction.__aexit__.side_effect = commit
+        conn = Mock(execute=AsyncMock(), fetch=AsyncMock(side_effect=[[{"user_id": 7}], [{"user_id": 7}]]))
+        conn.transaction.return_value = transaction
+        pool = Mock(close=AsyncMock(side_effect=close_pool))
+        pool.acquire.return_value = AsyncMock()
+        pool.acquire.return_value.__aenter__.return_value = conn
+
+        async def open_pool(**settings):
+            attempts.append((threading.current_thread(), asyncio.get_running_loop()))
+            if len(attempts) == 1:
+                raise ConnectionError("private database error")
+            return pool
+
+        create_pool = AsyncMock(side_effect=open_pool)
+
+        def serve():
+            create_pool.assert_not_called()
+            pending = self.create_server.call_args.args[2]
+            pending.put_nowait({
+                "event": "RESUME_WRITE", "data": {
+                    "discord_id": "100", "resume": resume_handler.Resume("sample", overall_vector=vector.tolist()),
+                },
+            })
+            for discord_id in ("101", "102"):
+                pending.put_nowait({
+                    "event": "VECTORIZATION",
+                    "data": {
+                        "discord_id": discord_id,
+                        "resume": resume_handler.Resume("sample"),
+                        "normalized_resume": {},
+                    },
+                })
+
+        self.server.serve_forever.side_effect = serve
+        with (
+            patch.object(writer_handler, "logger", main.get_logger("main")),
+            patch.object(vectorizer, "vectorize_resume", return_value={"overall_vector": vector}),
+            patch.object(connection, "_pool", None),
+            patch.object(connection, "_pool_init_lock", None),
+            patch.object(connection.asyncpg, "create_pool", create_pool),
+        ):
+            main.main()
+
+        self.assertEqual(commits, [True])
+        self.assertEqual(conn.fetch.await_args_list[0].args[1:], ("102",))
+        writer_thread, loop = attempts[0]
+        self.assertIsNot(writer_thread, threading.current_thread())
+        self.assertEqual(attempts, [(writer_thread, loop), (writer_thread, loop)])
+        self.assertEqual(pool_closed_on, [(writer_thread, loop)])
+        self.assertTrue(loop.is_closed())
+        self.assertIn("RESUME_WRITE transaction failed: discord_id=101 exception_type=ConnectionError", self.output.getvalue())
+        self.assertEqual(self.output.getvalue().count("Resume successfully written for user_id=7"), 1)
+        self.assertNotIn("private database error", self.output.getvalue())
+        self.assertIn("drain completed: remaining=0", self.output.getvalue())
+        self.assertIn("writer queue workers stopped: stopped=1 alive=0", self.output.getvalue())
+        self.server.server_close.assert_called_once()
+
+    def test_writer_registration_preserves_payload_validation(self):
+        writer_handler = import_module("writer-handler")
+        router = import_module("event_router").EventRouter()
+        db_runtime = Mock()
+        writer_handler.register_handlers(router, db_runtime=db_runtime)
+
+        with patch.object(writer_handler, "logger") as logger:
+            router.route({"event": "RESUME_WRITE", "data": []})
+            logger.warning.assert_called_once_with("Invalid RESUME_WRITE payload")
+            logger.reset_mock()
+            router.route({"event": "RESUME_WRITE", "data": {"discord_id": 123}})
+            logger.warning.assert_called_once_with("Invalid Discord ID in RESUME_WRITE payload")
+            logger.reset_mock()
+            router.route({"event": "RESUME_WRITE", "data": {"discord_id": "123"}})
+            logger.warning.assert_called_once_with("Missing or invalid Resume in RESUME_WRITE payload")
+
+        db_runtime.run.assert_not_called()
 
     def test_internship_submission_uses_worker_and_shutdown_drains_queue(self):
         self.serve_events({

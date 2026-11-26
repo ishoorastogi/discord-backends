@@ -20,6 +20,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./init-roles.sh:/docker-entrypoint-initdb.d/01-roles.sh:ro
       - ../schema.sql:/docker-entrypoint-initdb.d/02-schema.sql:ro
+      - ./init-perms.sql:/docker-entrypoint-initdb.d/03-perms.sql:ro
 
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]

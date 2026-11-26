@@ -26,6 +26,7 @@ from shared import event_queue
 from event_router import EventRouter
 
 handler = import_module('resume-handler')
+VECTOR_COLUMNS = import_module('shared.db-utils.crud.resume_queries').VECTOR_COLUMNS
 
 
 @pytest.fixture(autouse=True)
@@ -68,18 +69,19 @@ def test_adapter_and_handoff_preserve_data(offline):
     snapshot = deepcopy(normalized)
     # Give each section its own unit vector so swapped fields fail the check.
     offline.encode.side_effect = [np.eye(6, 384, dtype=np.float32)[[i]] for i in range(6)]
-    handler.handle_vectorization(result, resume_queue=pending)
+    writer_queue = queue.Queue()
+    handler.handle_vectorization(result, writer_queue=writer_queue)
+    completed = writer_queue.get_nowait()
+    assert completed['event'] == 'RESUME_WRITE'
+    assert completed['request_id'] == 'abc'
+    assert completed['data'] is result['data']
     assert result['data']['normalized_resume'] is normalized
     assert normalized == snapshot
     assert result['data']['resume'] is resume
     serialized = json.loads(json.dumps(resume.to_dict()))
-    assert set(result['data']['resume_vectors']) == {'skills', 'titles', 'experience', 'projects', 'education', 'overall'}
-    for section, vector in result['data']['resume_vectors'].items():
-        assert vector.shape == (384,)
-        assert vector.dtype == np.float32
-        assert np.linalg.norm(vector) == pytest.approx(1)
-        field_name = f'{section}_vector'
-        assert serialized.pop(field_name) == vector.tolist()
+    assert 'resume_vectors' not in completed['data']
+    for i, field_name in enumerate(VECTOR_COLUMNS):
+        assert serialized.pop(field_name) == np.eye(6, 384)[i].tolist()
         assert before.pop(field_name) is None
     assert serialized == before
     assert pending.empty()
@@ -90,8 +92,10 @@ def test_optional_fields_and_empty_resume(offline):
     pending = queue.Queue()
     handler.handle_normalization(original, resume_queue=pending)
     result = pending.get_nowait()
-    handler.handle_vectorization(result, resume_queue=pending)
-    assert 'resume_vectors' not in result['data']
+    writer_queue = queue.Queue()
+    handler.handle_vectorization(result, writer_queue=writer_queue)
+    assert writer_queue.empty()
+    assert all(getattr(result['data']['resume'], column) is None for column in VECTOR_COLUMNS)
     offline.encode.assert_not_called()
 
 
@@ -99,8 +103,8 @@ def test_optional_fields_and_empty_resume(offline):
                                       {'discord_id': '123', 'resume': {}}])
 def test_invalid_payloads(data):
     pending = queue.Queue()
-    for function in (handler.handle_normalization, handler.handle_vectorization):
-        function({'data': data}, resume_queue=pending)
+    handler.handle_normalization({'data': data}, resume_queue=pending)
+    handler.handle_vectorization({'data': data}, writer_queue=pending)
     assert pending.empty()
 
 
@@ -132,13 +136,14 @@ def test_normalizer_reused():
 
 
 @pytest.mark.parametrize('invalid', [np.zeros(384, dtype=np.float32), np.ones(12, dtype=np.float32),
-                                     np.full(384, np.nan, dtype=np.float32)])
+                                     np.full(384, np.nan, dtype=np.float32), None])
 def test_invalid_vectors_not_published(monkeypatch, invalid):
     original = event()
     original['data']['normalized_resume'] = {'skills': ['python']}
-    monkeypatch.setattr(vectorizer, 'vectorize_resume', lambda data: {'overall': invalid})
-    handler.handle_vectorization(original, resume_queue=queue.Queue())
-    assert 'resume_vectors' not in original['data']
+    monkeypatch.setattr(vectorizer, 'vectorize_resume', lambda data: {'overall_vector': invalid} if invalid is not None else {})
+    writer_queue = queue.Queue()
+    handler.handle_vectorization(original, writer_queue=writer_queue)
+    assert writer_queue.empty()
     assert original['data']['resume'].overall_vector is None
 
 
@@ -148,9 +153,10 @@ def test_vectorizer_receives_original_normalized_dict(monkeypatch):
     original['data']['normalized_resume'] = normalized
     mock = Mock(side_effect=RuntimeError('model failed'))
     monkeypatch.setattr(vectorizer, 'vectorize_resume', mock)
-    handler.handle_vectorization(original, resume_queue=queue.Queue())
+    writer_queue = queue.Queue()
+    handler.handle_vectorization(original, writer_queue=writer_queue)
     assert mock.call_args.args[0] is normalized
-    assert 'resume_vectors' not in original['data']
+    assert writer_queue.empty()
 
 
 def test_real_worker_pipeline_dispatches_once(monkeypatch):
@@ -159,13 +165,12 @@ def test_real_worker_pipeline_dispatches_once(monkeypatch):
     intake_queue, resume_queue = queue.Queue(), queue.Queue()
     router = EventRouter()
     intake.register_handlers(router, resume_queue=resume_queue, internship_queue=queue.Queue())
-    handler.register_handlers(router, resume_queue=resume_queue, writer_queue=queue.Queue())
+    writer_queue = queue.Queue()
+    handler.register_handlers(router, resume_queue=resume_queue, writer_queue=writer_queue)
     stages = []
-    processed = []
     for name, function in list(router._handlers.items()):
         def record(event, name=name, function=function):
             stages.append(name)
-            processed.append(event)
             function(event)
         router.register(name, record)
     resume = Resume('SKILLS\nProgramming Languages: Python\nPROJECTS\nAPI | Python')
@@ -183,10 +188,12 @@ def test_real_worker_pipeline_dispatches_once(monkeypatch):
         assert event_queue.drain(resume_queue, 3) == 0
         assert stages == ['RESUME_UPLOAD', 'PARSE', 'EXTRACTION', 'NORMALIZATION', 'VECTORIZATION']
         assert resume.skills.languages == ['Python']
-        final = processed[-1]
+        final = writer_queue.get_nowait()
+        assert final['event'] == 'RESUME_WRITE'
         assert final['request_id'] == 'abc'
         assert final['data']['resume'] is resume
-        assert set(final['data']) >= {'resume', 'normalized_resume', 'resume_vectors'}
+        assert set(final['data']) >= {'resume', 'normalized_resume'}
+        assert final['data']['resume'].overall_vector is not None
     finally:
         assert event_queue.stop_workers(intake_queue, workers[:1], 3) == 0
         assert event_queue.stop_workers(resume_queue, workers[1:], 3) == 0
@@ -233,13 +240,10 @@ def test_main_workers_run_complete_pipeline(monkeypatch, tmp_path):
     resume = Resume('SKILLS\nProgramming Languages: Python, sample skill alias')
     monkeypatch.setattr(handler, 'parse_resume_base64', lambda _: resume)
     completed = []
-    vectorize = handler.handle_vectorization
-
-    def capture(event, *, resume_queue, result_queue=None):
-        vectorize(event, resume_queue=resume_queue, result_queue=result_queue)
+    def capture(event, *, db_runtime):
         completed.append(event)
 
-    monkeypatch.setattr(handler, 'handle_vectorization', capture)
+    monkeypatch.setattr(import_module('writer-handler'), 'handle_resume_write', capture)
     server = Mock()
 
     def create_server(host, port, intake_queue):
@@ -254,7 +258,9 @@ def test_main_workers_run_complete_pipeline(monkeypatch, tmp_path):
     assert len(completed) == 1
     assert completed[0]['request_id'] == 'main-test'
     assert completed[0]['data']['resume'] is resume
-    assert set(completed[0]['data']) >= {'resume', 'normalized_resume', 'resume_vectors'}
+    assert completed[0]['event'] == 'RESUME_WRITE'
+    assert set(completed[0]['data']) >= {'resume', 'normalized_resume'}
+    assert resume.overall_vector is not None
     assert completed[0]['data']['normalized_resume']['skills'] == ['Python (computer programming)']
     assert len(list((tmp_path / 'configured-cache').glob('esco_vectors_*.npy'))) == 1
     assert not (tmp_path / 'legacy-cache').exists()
@@ -266,7 +272,7 @@ def test_completion_survives_subsequent_worker_events():
     results = queue.Queue(2)
     pending = event_queue.create_queue(4)
     router = EventRouter()
-    handler.register_handlers(router, resume_queue=pending, writer_queue=queue.Queue(), result_queue=results)
+    handler.register_handlers(router, resume_queue=pending, writer_queue=results)
     router.register('NEXT', lambda event: None)
     registry = event_queue.HandlerRegistry()
     registry.register(router.route)
@@ -283,16 +289,14 @@ def test_completion_survives_subsequent_worker_events():
         assert results.qsize() == 2
         for i, resume in enumerate(resumes):
             result = results.get_nowait()
-            assert result['event'] == 'WRITE'
+            assert result['event'] == 'RESUME_WRITE'
             assert result['request_id'] == str(i)
             assert result['source'] == 'test'
             assert result['data']['discord_id'] == '123'
             assert result['data']['resume'] is resume
             assert result['data']['normalized_resume'] == {'skills': ['python']}
-            assert result['data']['resume_vectors']['overall'].shape == (384,)
-            assert resume.overall_vector == result['data']['resume_vectors']['overall'].tolist()
-            assert resume.skills_vector == result['data']['resume_vectors']['skills'].tolist()
-            assert resume.experience_vector is None
+            assert len(resume.overall_vector) == len(resume.skills_vector) == 384
+            assert resume.titles_vector is resume.experience_vector is resume.projects_vector is resume.education_vector is None
             results.task_done()
     finally:
         assert event_queue.stop_workers(pending, [worker], 3) == 0
@@ -305,7 +309,7 @@ def test_full_completion_queue_does_not_report_delivery(monkeypatch):
     original['data']['normalized_resume'] = {'skills': ['python']}
     logger = Mock()
     monkeypatch.setattr(handler, 'logger', logger)
-    handler.handle_vectorization(original, resume_queue=queue.Queue(), result_queue=results)
+    handler.handle_vectorization(original, writer_queue=results)
     assert results.get_nowait() == 'existing'
     assert results.empty()
     logger.info.assert_called_once_with('Handling VECTORIZATION event')
@@ -322,8 +326,8 @@ def test_distinct_vectors_average_and_renormalize(monkeypatch):
     vectors = vectorizer.vectorize_resume({'projects': [{'name': 'One'}, {'name': 'Two'}]})
     expected = np.zeros(384, dtype=np.float32)
     expected[:2] = 1 / np.sqrt(2)
-    np.testing.assert_allclose(vectors['projects'], expected, atol=1e-6)
-    assert set(vectors) == {'projects', 'overall'}
+    np.testing.assert_allclose(vectors['projects_vector'], expected, atol=1e-6)
+    assert set(vectors) == {'projects_vector', 'overall_vector'}
     assert vectorizer.build_section_texts({'skills': [], 'education': []}) == {}
 
 

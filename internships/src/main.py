@@ -42,6 +42,8 @@ def main() -> None:
     intake_handler = import_module("intake-handler")
     resume_handler = import_module("resume-handler")
     internship_handler = import_module("internship-handler")
+    writer_handler = import_module("writer-handler")
+    db_runtime_module = import_module("shared.db-utils.runtime")
     event_router = import_module("event_router")
     tcp_listener = import_module("tcp_listener")
 
@@ -61,28 +63,37 @@ def main() -> None:
     internship_queue = event_queue.create_queue(max_size)
     writer_queue = event_queue.create_queue(max_size)
 
-    # Retained separately for a future writer; never drained by processing workers.
-    result_queue = import_module("completion_results").get_result_queue(max_size)
-
     registry = event_queue.HandlerRegistry()
     router = event_router.EventRouter()
+    writer_registry = event_queue.HandlerRegistry()
+    writer_router = event_router.EventRouter()
+    db_runtime = db_runtime_module.DatabaseRuntime()
 
     # Register supported event types
     intake_handler.register_handlers(router, resume_queue=resume_queue, internship_queue=internship_queue)
     internship_handler.register_handlers(router, internship_queue=internship_queue)
-    resume_handler.register_handlers(
-        router, resume_queue=resume_queue, writer_queue=writer_queue,
-        result_queue=result_queue, esco_csv=settings.esco_csv, esco_cache_dir=settings.esco_cache_dir,
-    )
-    #need to make:
-    # writer.register_handlers(router, writer_queue=writer_queue)
+    resume_handler.register_handlers(router, resume_queue=resume_queue, writer_queue=writer_queue, esco_csv=settings.esco_csv, esco_cache_dir=settings.esco_cache_dir)
+    writer_handler.register_handlers(writer_router, db_runtime=db_runtime)
 
     # Register the router with the event queue worker
     registry.register(partial(intake_handler.process_event, router=router))
+    writer_registry.register(writer_router.route)
+
+    class WriterWorker(event_queue.Worker):
+        def _run(self):
+            try:
+                db_runtime.start()
+                super()._run()
+            finally:
+                try:
+                    db_runtime.close()
+                except Exception as error:
+                    logger.warning("Database runtime cleanup failed: exception_type=%s", type(error).__name__)
+
     intake_worker = event_queue.Worker(intake_queue, registry)
     resume_worker = event_queue.Worker(resume_queue, registry)
     internship_worker = event_queue.Worker(internship_queue, registry)
-    writer_worker = event_queue.Worker(writer_queue, registry)
+    writer_worker = WriterWorker(writer_queue, writer_registry)
 
     server = None
     stopping = threading.Event()

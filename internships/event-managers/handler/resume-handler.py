@@ -1,6 +1,7 @@
 """Resume processing event handlers."""
 
 from functools import partial
+from importlib import import_module
 
 from exceptions import ResumeParserError
 from extraction import EmptyResumeTextError, extract_resume_data
@@ -11,13 +12,13 @@ from shared.event_queue import enqueue
 from shared.logs.log_config import get_logger
 
 logger = get_logger("resume handler")
+resume_queries = import_module("shared.db-utils.crud.resume_queries")
 
-def register_handlers(router, *, resume_queue, writer_queue, result_queue=None, esco_csv=None, esco_cache_dir=None):
+def register_handlers(router, *, resume_queue, writer_queue, esco_csv=None, esco_cache_dir=None):
     router.register("PARSE", partial(handle_parse, resume_queue=resume_queue))
     router.register("EXTRACTION", partial(handle_extraction, resume_queue=resume_queue))
     router.register("NORMALIZATION", partial(handle_normalization, resume_queue=resume_queue, esco_csv=esco_csv, esco_cache_dir=esco_cache_dir,))
     router.register("VECTORIZATION", partial(handle_vectorization,  writer_queue=writer_queue))
-    router.register("WRITE", partial(handle_send_to_writer, writer_queue=writer_queue))
 
 def handle_parse(event: dict, *, resume_queue):
     logger.info("Handling PARSE event")
@@ -41,6 +42,10 @@ def handle_parse(event: dict, *, resume_queue):
             discord_id, type(error).__name__,
         )
         return
+
+    name = data.get("name")
+    if resume.name is None and isinstance(name, str):
+        resume.name = name.strip() or None
 
     extraction_event = {
         **event,
@@ -135,10 +140,11 @@ def handle_vectorization(event: dict, *, writer_queue):
         import numpy as np
         from vectorization.resume_vectorizer import vectorize_resume
         vectors = vectorize_resume(data["normalized_resume"])
-        if not vectors or "overall" not in vectors:
+        if "overall_vector" not in vectors:
             raise ValueError("Missing resume vectors")
-        for vector in vectors.values():
-            if (not isinstance(vector, np.ndarray) or vector.shape != (384,)
+        for column, vector in vectors.items():
+            if (column not in resume_queries.VECTOR_COLUMNS
+                    or not isinstance(vector, np.ndarray) or vector.shape != (resume_queries.RESUME_DIM,)
                     or vector.dtype != np.float32 or not np.isfinite(vector).all()
                     or not np.isclose(np.linalg.norm(vector), 1.0, atol=1e-5)):
                 raise ValueError("Invalid resume vector")
@@ -148,23 +154,13 @@ def handle_vectorization(event: dict, *, writer_queue):
                        data["discord_id"], type(error).__name__)
         return
     resume = data["resume"]
-    resume.skills_vector = vector_lists.get("skills")
-    resume.titles_vector = vector_lists.get("titles")
-    resume.experience_vector = vector_lists.get("experience")
-    resume.projects_vector = vector_lists.get("projects")
-    resume.education_vector = vector_lists.get("education")
-    resume.overall_vector = vector_lists["overall"]
-    data["resume_vectors"] = vectors
-    
-    completed = {**event, "event": "WRITE", "data": data}
+    for column in resume_queries.VECTOR_COLUMNS:
+        setattr(resume, column, vector_lists.get(column))
+
+    completed = {**event, "event": "RESUME_WRITE", "data": data}
     if not enqueue(writer_queue, completed):
-        logger.warning("Resume completion delivery failed: result queue full discord_id=%s request_id=%s",
+        logger.warning("Resume processing completion failed: writer queue full discord_id=%s request_id=%s",
                        data["discord_id"], event.get("request_id"))
         return
-    logger.info("Resume completion delivered: discord_id=%s request_id=%s",
+    logger.info("Resume processing complete: discord_id=%s request_id=%s",
                 data["discord_id"], event.get("request_id"))
-
-def handle_send_to_writer(event: dict, *, writer_queue):
-    logger.info("Sending to WRITE queue")
-    logger.info("vector overall: %s", event.get("data", {}).get("resume_vectors", {}).get("overall"))
-    #TODO: Implement the logic to handle the WRITE event

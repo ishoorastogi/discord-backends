@@ -15,6 +15,7 @@ from importlib import import_module, util
 import json
 import os
 from pathlib import Path
+import queue
 import runpy
 import socket
 import subprocess
@@ -25,7 +26,7 @@ from unittest.mock import patch
 import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
-STAGES = ['RESUME_UPLOAD', 'PARSE', 'EXTRACTION', 'NORMALIZATION', 'VECTORIZATION']
+STAGES = ['RESUME_UPLOAD', 'PARSE', 'EXTRACTION', 'NORMALIZATION', 'VECTORIZATION', 'RESUME_WRITE']
 
 
 def make_pdf(path: Path) -> None:
@@ -92,7 +93,9 @@ def run(args) -> int:
     router_module = import_module('event_router')
     listener = import_module('tcp_listener')
     vectorizer = import_module('vectorization.resume_vectorizer')
-    result_queue = import_module('completion_results').get_result_queue()
+    writer_handler = import_module('writer-handler')
+    vector_columns = import_module('shared.db-utils.crud.resume_queries').VECTOR_COLUMNS
+    writer_events = queue.Queue(1)
     request_id = 'demo-' + uuid.uuid4().hex
     discord_id = '123456789012345678'
     state = {'stages': [], 'snapshots': {}, 'errors': [], 'connected': False, 'accepted': False}
@@ -120,7 +123,7 @@ def run(args) -> int:
             data = event.get('data', {})
             if data.get('discord_id') != discord_id:
                 raise RuntimeError('Discord ID changed')
-            if stage in STAGES[2:]:
+            if stage in ('EXTRACTION', 'NORMALIZATION', 'VECTORIZATION'):
                 if data.get('resume') is not state.get('resume'):
                     raise RuntimeError('Original Resume object was replaced')
                 if stage == 'EXTRACTION':
@@ -151,23 +154,29 @@ def run(args) -> int:
             raise
 
     def capture_completion(event):
-        if (event.get('event') != 'VECTORIZATION_COMPLETE'
+        if (event.get('event') != 'RESUME_WRITE'
                 or event.get('request_id') != request_id):
             raise RuntimeError('Invalid completion envelope')
         data = event['data']
         if data.get('discord_id') != discord_id or data.get('resume') is not state.get('resume'):
             raise RuntimeError('Completion metadata or Resume identity changed')
-        vectors = data.get('resume_vectors')
-        if not isinstance(vectors, dict) or 'overall' not in vectors:
+        resume = data['resume']
+        if resume.overall_vector is None:
             raise RuntimeError('VECTORIZATION produced no usable result')
-        for name, vector in vectors.items():
-            if (not isinstance(vector, np.ndarray) or vector.shape != (384,)
-                    or vector.dtype != np.float32 or not np.isfinite(vector).all()
+        vectors = {}
+        for name in vector_columns:
+            value = getattr(resume, name)
+            if value is None:
+                continue
+            vector = np.asarray(value, dtype=np.float32)
+            if (vector.shape != (384,) or not np.isfinite(vector).all()
                     or not np.isclose(np.linalg.norm(vector), 1.0, atol=1e-5)):
                 raise RuntimeError(f'Invalid embedding: {name}')
+            vectors[name] = vector
         if data['normalized_resume'] != state['snapshots']['NORMALIZATION']:
             raise RuntimeError('Normalized data changed during vectorization')
-        if data['resume'].to_dict() != state['snapshots']['EXTRACTION']:
+        extracted = state['snapshots']['EXTRACTION']
+        if any(value != extracted[key] for key, value in resume.to_dict().items() if key not in vector_columns):
             raise RuntimeError('Extracted Resume changed after extraction')
         state['snapshots']['VECTORIZATION'] = vectors
         state['final_keys'] = sorted(data)
@@ -201,11 +210,7 @@ def run(args) -> int:
                                          and ack.get('request_id') == request_id)
                     if not state['accepted']:
                         raise RuntimeError(f'Upload not accepted: {ack}')
-                    result = result_queue.get(timeout=args.timeout)
-                    try:
-                        capture_completion(result)
-                    finally:
-                        result_queue.task_done()
+                    capture_completion(writer_events.get(timeout=args.timeout))
             except Exception as error:
                 state['errors'].append(f'Client: {type(error).__name__}: {error}')
             finally:
@@ -229,6 +234,11 @@ def run(args) -> int:
             ))
             instrumentation.enter_context(patch.object(router_module.EventRouter, 'route', observe))
             instrumentation.enter_context(patch.object(listener, 'create_server', bind_demo_server))
+            instrumentation.enter_context(patch.object(
+                writer_handler, 'handle_resume_write',
+                lambda event, *, db_runtime: writer_events.put_nowait(event)
+                if event.get('request_id') == request_id else None,
+            ))
             if args.mock_model:
                 instrumentation.enter_context(patch.object(vectorizer, '_model', MockModel()))
             client.start()
@@ -249,7 +259,7 @@ def run(args) -> int:
     checks += [(label, stage in state['snapshots']) for stage, label in [
         ('PARSE', 'PDF parsing completed'), ('EXTRACTION', 'Structured extraction completed'),
         ('NORMALIZATION', 'Normalization completed'), ('VECTORIZATION', 'Vectorization completed')]]
-    checks.append(('Production completion queue received result', 'VECTORIZATION' in state['snapshots']))
+    checks.append(('Writer queue received RESUME_WRITE', 'VECTORIZATION' in state['snapshots']))
     checks.append(('Stages executed exactly once in order', state['stages'] == STAGES))
     for label, passed in checks:
         print(f'[{"PASS" if passed else "FAIL"}] {label}')
@@ -273,7 +283,7 @@ def run(args) -> int:
         print('[PASS] Request/Discord IDs, original Resume and normalized data preserved')
     for error in state['errors']:
         print('[FAIL] ' + error)
-    print('Temporary PDF removed; embeddings stayed in memory; no writer/database was invoked.')
+    print('Temporary PDF removed. The demo captured the write event in memory.')
     return 0 if all(passed for _, passed in checks) and not state['errors'] else 1
 
 

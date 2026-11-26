@@ -23,7 +23,7 @@ def dedupe(items):
 
 
 def build_section_texts(resume):
-    """Normalized dict -> {section: [texts]}. Empty sections are dropped (never a zero vector)."""
+    """Return input texts by Resume vector field, omitting empty sections."""
     exp = resume.get("experience") or []
     proj = resume.get("projects") or []
 
@@ -55,8 +55,14 @@ def build_section_texts(resume):
     overall = " ".join(t for t in [skills_text, titles_text, " ".join(experience_texts),
                                    " ".join(project_texts), " ".join(education_texts)] if t)
 
-    sections = {"skills": [skills_text], "titles": [titles_text], "experience": experience_texts,
-                "projects": project_texts, "education": education_texts, "overall": [overall]}
+    sections = {
+        "skills_vector": [skills_text],
+        "titles_vector": [titles_text],
+        "experience_vector": experience_texts,
+        "projects_vector": project_texts,
+        "education_vector": education_texts,
+        "overall_vector": [overall],
+    }
     return {k: [t for t in v if t] for k, v in sections.items() if any(v)}
 
 
@@ -82,7 +88,7 @@ def embed_texts(texts):
 
 
 def vectorize_resume(resume):
-    """Normalized resume dict -> {section: 384-number unit vector}."""
+    """Return 384-number unit vectors keyed by Resume vector field."""
     section_texts = build_section_texts(resume)
     if not section_texts:
         raise EmptyResumeError("Resume has no usable text.")

@@ -1,11 +1,6 @@
-"""Bounded, process-local handoff for VECTORIZATION_COMPLETE events.
+"""Process-local result queue helper.
 
-A future writer calls get_result_queue(), then get()/get_nowait(), persists the
-complete event, and calls task_done(). No automatic consumer discards results.
-The first initialization fixes capacity for this process (production initializes
-it from QUEUE_MAX_SIZE). Pending results survive processing-worker shutdown, but
-not process exit. This queue is deliberately not included in processing drains:
-without a writer, waiting for its unfinished tasks would hang shutdown.
+The backend sends completed resumes directly to the writer queue as RESUME_WRITE.
 """
 from threading import Lock
 

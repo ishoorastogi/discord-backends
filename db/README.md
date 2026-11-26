@@ -177,6 +177,22 @@ Start it again:
 
 **Stopping preserves database records.** `docker compose down` also preserves named volumes by default, but removes the container and network. The `restart: unless-stopped` policy does not normally restart a container you explicitly stopped until you start it again.
 
+### Migrate existing resume vectors
+
+Run from the repository root against the existing Compose database.
+
+```sh
+docker compose --env-file db/.env -f db/docker/docker-compose.yml exec -T postgres \
+  sh -c 'exec psql -X -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
+  < db/migrations/001_resume_vector_columns.sql
+```
+
+The migration keeps existing vectors and leaves the two new vector fields NULL
+for existing rows. PostgreSQL updates the existing
+resume cosine index to follow the renamed `overall_vector` column. The
+migration takes an exclusive lock on `resumes` until commit and can be rerun.
+If both the old and new names exist for a field, the transaction rolls back.
+
 ## 9. Reset the database (destructive)
 
 ```bash
@@ -254,4 +270,4 @@ Keep SQL access and connection pooling inside the API's database layer. Backend 
 
 ---
 
-**Scope:** Local developer setup. This guide does not configure shared production storage, backups, migrations, TLS, or remote database access.
+**Scope:** Local developer setup for the Compose database.

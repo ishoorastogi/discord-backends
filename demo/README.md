@@ -7,8 +7,8 @@ Run from the repository root, on `feature/addu-resume-integration`
 PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -B demo/resume_pipeline_demo.py
 ```
 
-The script returns 0 only when the TCP upload is accepted, all five stages run
-exactly once in order, and the final vectors pass validation. A TCP acknowledgment
+The script returns 0 only when the TCP upload is accepted, the pipeline reaches
+the writer exactly once in order, and the final vectors pass validation. A TCP acknowledgment
 alone never makes the demo successful. The complete runtime report includes
 extracted fields, normalized JSON, actual vector sections, dtype, shape, and norms.
 
@@ -32,10 +32,10 @@ extracted fields, normalized JSON, actual vector sections, dtype, shape, and nor
    calls handlers directly nor inserts events or results. It checks original
    Resume identity, request/Discord IDs, unchanged normalized data, finite
    nonzero 384-dimensional float32 unit embeddings, and exact stage order.
-6. The client receives VECTORIZATION_COMPLETE from the production result queue,
-   validates the full event, calls task_done(), then shuts down the
-   service. Production cleanup drains the queues and stops workers. The PDF is
-   removed automatically; vectors remain in memory. No database or writer runs.
+6. The writer receives `RESUME_WRITE` through its production queue. A demo-only
+   handler captures the event in memory so the client can validate it and shut
+   down the service without database access. Production cleanup drains the
+   queues and stops workers. The temporary PDF is removed automatically.
 
 ## Dependencies and offline inference
 
@@ -108,34 +108,15 @@ PYTHONDONTWRITEBYTECODE=1 LOG_FILE='' .venv/bin/python -B -m pytest -p no:cachep
   internships/tests/event-listener/test_resume_handler.py shared/logs -q
 ```
 
-The full existing internship suite has 30 previously verified baseline failures
-in tests referencing `main.config`; this demo does not modify those tests or
-production startup code to address them. Persistence and downstream result
-responses are outside this demo's scope.
-
 ## Production completion contract
 
-`completion_results.get_result_queue()` exposes the dedicated bounded process-local
-queue to a future writer running in the same process. Production startup first
-initializes it using `QUEUE_MAX_SIZE`; the first initialization fixes its capacity.
-Writers should attach after startup and use the existing pipeline import paths.
-The vectorization handler enqueues a `VECTORIZATION_COMPLETE` envelope retaining
-all metadata and the same data dictionary, with `resume`, `normalized_resume`,
-and `resume_vectors`. It never routes this completion back into processing.
-
-A consumer takes an event with `get()`/`get_nowait()`, persists or otherwise
-handles it, then calls `task_done()`. No default consumer discards events. The demo
-is a real consumer of this queue; its observer is only for intermediate stages.
-The queue holds strong references after later events are processed. It survives
-processing-worker shutdown in the running process, but is **not durable** across
-process exit or crashes. Shutdown intentionally does not drain/join this result
-queue without a writer, so pending completions cannot hang shutdown. A future
-writer must coordinate persistence before process exit and handle failures after
-`get()` explicitly; `task_done()` is queue accounting, not a durable acknowledgment.
-
-If full, the handler logs failed completion delivery with Discord/request IDs and
-does not log successful delivery. It does not retry or persist that rejected event.
-Capacity and consumer throughput must be planned before production deployment.
+Vectorization enqueues `RESUME_WRITE` on the bounded writer queue with the original
+request metadata, the enriched `Resume`, and `normalized_resume`. The vectors
+live on `Resume` as `skills_vector`, `titles_vector`, `experience_vector`,
+`projects_vector`, `education_vector`, and `overall_vector`. Missing optional
+section vectors are stored as SQL NULL. The writer resolves the user and saves
+the resume in one transaction, logging success after commit. If the writer
+queue is full, the vectorization handler logs the rejected handoff.
 
 In `internships/src/config.json`, `ESCO_CSV` enables the semantic layer and
 `ESCO_CACHE_DIR` gives the backend a writable directory for its skill vectors.

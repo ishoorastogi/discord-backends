@@ -4,12 +4,10 @@ Run: python3 internships/test-scripts/resume_upload.py [resume.pdf]
 
 The default resume is the newest PDF in internships/data/uploads. An optional
 filename is resolved within that directory. The script starts src/main.py using
-src/config.json, checks UPLOAD_ACCEPTED, waits for the NORMALIZATION handler's log,
-and shuts down the backend it started. Stop any existing backend first.
-
-NORMALIZATION is currently a placeholder; success confirms PDF parsing,
-structured extraction, and delivery through that handler. Application startup
-errors fail the test and are printed without changing application code.
+src/config.json, checks UPLOAD_ACCEPTED, waits for the resume transaction to
+commit, and shuts down the backend it started. Stop any existing backend first
+and point the test at a disposable database. The upload creates or replaces a
+resume for the supplied Discord ID.
 """
 
 import argparse
@@ -147,8 +145,8 @@ def run_test(resume, discord_id, timeout):
         wait_for_log(process, output, "Handling NORMALIZATION event", timeout)
         wait_for_log(process, output, f"Moving to VECTORIZATION stage: discord_id={discord_id}", timeout)
         wait_for_log(process, output, "Handling VECTORIZATION event", timeout)
-        wait_for_log(process, output, "Sending to WRITE queue", timeout)
-        print("PASS: RESUME_UPLOAD → PARSE → EXTRACTION → NORMALIZATION → VECTORIZATION → WRITE", flush=True)
+        wait_for_log(process, output, "Resume successfully written for user_id=", timeout)
+        print("PASS: RESUME_UPLOAD → PARSE → EXTRACTION → NORMALIZATION → VECTORIZATION → RESUME_WRITE", flush=True)
     finally:
         if process.poll() is None:
             process.terminate()
