@@ -145,7 +145,10 @@ def run_test(resume, discord_id, timeout):
         wait_for_log(process, output, "Handling EXTRACTION event", timeout)
         wait_for_log(process, output, f"Moving to NORMALIZATION stage: discord_id={discord_id}", timeout)
         wait_for_log(process, output, "Handling NORMALIZATION event", timeout)
-        print("PASS: RESUME_UPLOAD → PARSE → EXTRACTION → NORMALIZATION", flush=True)
+        wait_for_log(process, output, f"Moving to VECTORIZATION stage: discord_id={discord_id}", timeout)
+        wait_for_log(process, output, "Handling VECTORIZATION event", timeout)
+        wait_for_log(process, output, "Sending to WRITE queue", timeout)
+        print("PASS: RESUME_UPLOAD → PARSE → EXTRACTION → NORMALIZATION → VECTORIZATION → WRITE", flush=True)
     finally:
         if process.poll() is None:
             process.terminate()

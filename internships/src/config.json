@@ -1,4 +1,6 @@
 {
   "TCP_HOST": "127.0.0.1",
-  "TCP_PORT": 8000
+  "TCP_PORT": 8000,
+  "ESCO_CSV": "../data/esco/skills_en.csv",
+  "ESCO_CACHE_DIR": "../data/esco/cache"
 }

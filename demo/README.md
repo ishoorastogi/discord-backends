@@ -69,10 +69,9 @@ credentials are required. A Hugging Face offline warning can appear even when
 loading succeeds from cache. Missing or incomplete model files produce a failed
 report; there is no automatic mocked fallback.
 
-Normalization is explicitly **dictionary-only** for a repeatable demonstration:
-`ESCO_CSV` is disabled in this process. This does not demonstrate real ESCO
-inference. The current extractor does not produce experience bullets or an
-education `field`; the demo preserves that behavior and does not invent them.
+Normalization is **dictionary-only** for a repeatable demonstration. The demo
+disables the configured ESCO CSV path in memory. The current extractor leaves
+experience bullets and the education `field` empty.
 
 If real inference is unavailable, run this separate, explicitly labeled mode:
 
@@ -138,11 +137,10 @@ If full, the handler logs failed completion delivery with Discord/request IDs an
 does not log successful delivery. It does not retry or persist that rejected event.
 Capacity and consumer throughput must be planned before production deployment.
 
-ESCO disk caching is disabled by default: skill vectors are retained in memory.
-Set `ESCO_CACHE_DIR` to a writable external directory to enable disk caching; no
-repository write is required. `ESCO_CSV` still enables the real semantic layer;
-configured dataset/model/cache failures are reported, never converted to a
-successful dictionary fallback. No ESCO dataset or model was downloaded here.
+In `internships/src/config.json`, `ESCO_CSV` enables the semantic layer and
+`ESCO_CACHE_DIR` gives the backend a writable directory for its skill vectors.
+With a `null` or omitted cache directory, ESCO keeps skill vectors in memory.
+The backend reports dataset, model, and cache failures as normalization failures.
 
 Python 3.10 clean installation/inference: **NOT VERIFIED**, because no Python
 3.10 interpreter was found in PATH or standard installation locations. The

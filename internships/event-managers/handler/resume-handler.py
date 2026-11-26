@@ -12,12 +12,12 @@ from shared.logs.log_config import get_logger
 
 logger = get_logger("resume handler")
 
-def register_handlers(router, *, resume_queue, result_queue=None):
+def register_handlers(router, *, resume_queue, writer_queue, result_queue=None, esco_csv=None, esco_cache_dir=None):
     router.register("PARSE", partial(handle_parse, resume_queue=resume_queue))
     router.register("EXTRACTION", partial(handle_extraction, resume_queue=resume_queue))
-    router.register("NORMALIZATION", partial(handle_normalization, resume_queue=resume_queue))
-    router.register("VECTORIZATION", partial(handle_vectorization, resume_queue=resume_queue, result_queue=result_queue))
-    router.register("WRITE", partial(handle_send_to_writer))
+    router.register("NORMALIZATION", partial(handle_normalization, resume_queue=resume_queue, esco_csv=esco_csv, esco_cache_dir=esco_cache_dir,))
+    router.register("VECTORIZATION", partial(handle_vectorization,  writer_queue=writer_queue))
+    router.register("WRITE", partial(handle_send_to_writer, writer_queue=writer_queue))
 
 def handle_parse(event: dict, *, resume_queue):
     logger.info("Handling PARSE event")
@@ -98,7 +98,7 @@ def _valid_resume_data(event):
     return data
 
 
-def handle_normalization(event: dict, *, resume_queue):
+def handle_normalization(event: dict, *, resume_queue, esco_csv=None, esco_cache_dir=None):
     logger.info("Handling NORMALIZATION event")
     data = _valid_resume_data(event)
     if data is None:
@@ -107,7 +107,7 @@ def handle_normalization(event: dict, *, resume_queue):
     try:
         from normalization.normalize_resume import normalize_resume
         from normalization_adapter import normalization_input
-        normalizer = get_normalizer()
+        normalizer = get_normalizer(esco_csv, esco_cache_dir)
         try:
             normalized = normalize_resume(normalization_input(data["resume"]), normalizer)
         finally:
@@ -125,7 +125,7 @@ def handle_normalization(event: dict, *, resume_queue):
         logger.info("Moving to VECTORIZATION stage: discord_id=%s", data["discord_id"])
 
 
-def handle_vectorization(event: dict, *, resume_queue, result_queue=None):
+def handle_vectorization(event: dict, *, writer_queue):
     logger.info("Handling VECTORIZATION event")
     data = _valid_resume_data(event)
     if data is None or not isinstance(data.get("normalized_resume"), dict):
@@ -142,22 +142,29 @@ def handle_vectorization(event: dict, *, resume_queue, result_queue=None):
                     or vector.dtype != np.float32 or not np.isfinite(vector).all()
                     or not np.isclose(np.linalg.norm(vector), 1.0, atol=1e-5)):
                 raise ValueError("Invalid resume vector")
+        vector_lists = {section: vector.tolist() for section, vector in vectors.items()}
     except Exception as error:
         logger.warning("Resume vectorization failed: discord_id=%s exception_type=%s",
                        data["discord_id"], type(error).__name__)
         return
+    resume = data["resume"]
+    resume.skills_vector = vector_lists.get("skills")
+    resume.titles_vector = vector_lists.get("titles")
+    resume.experience_vector = vector_lists.get("experience")
+    resume.projects_vector = vector_lists.get("projects")
+    resume.education_vector = vector_lists.get("education")
+    resume.overall_vector = vector_lists["overall"]
     data["resume_vectors"] = vectors
-    if result_queue is None:
-        from completion_results import get_result_queue
-        result_queue = get_result_queue()
-    completed = {**event, "event": "VECTORIZATION_COMPLETE"}
-    if not enqueue(result_queue, completed):
+    
+    completed = {**event, "event": "WRITE", "data": data}
+    if not enqueue(writer_queue, completed):
         logger.warning("Resume completion delivery failed: result queue full discord_id=%s request_id=%s",
                        data["discord_id"], event.get("request_id"))
         return
     logger.info("Resume completion delivered: discord_id=%s request_id=%s",
                 data["discord_id"], event.get("request_id"))
 
-def handle_send_to_writer(event: dict, *): #insert dbs queue here
-    logger.info("Handling WRITE event")
+def handle_send_to_writer(event: dict, *, writer_queue):
+    logger.info("Sending to WRITE queue")
+    logger.info("vector overall: %s", event.get("data", {}).get("resume_vectors", {}).get("overall"))
     #TODO: Implement the logic to handle the WRITE event

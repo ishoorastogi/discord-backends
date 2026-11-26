@@ -27,12 +27,12 @@ class MainTests(BaseTest):
         super().setUp()
         stack = ExitStack()
         self.addCleanup(stack.close)
-        stack.enter_context(patch.object(main.listener_config, "load_environment"))
+        stack.enter_context(patch.object(main.config, "load_environment"))
         stack.enter_context(patch.object(
-            main.listener_config, "load_settings",
-            return_value=main.listener_config.Settings("127.0.0.1", 12345, 10, 3),
+            main.config, "load_settings",
+            return_value=main.config.Settings("127.0.0.1", 12345, 10, 3),
         ))
-        stack.enter_context(patch.multiple(main.listener_config, BIND_ATTEMPTS=3, BIND_RETRY_DELAY_SECONDS=0))
+        stack.enter_context(patch.multiple(main.config, BIND_ATTEMPTS=3, BIND_RETRY_DELAY_SECONDS=0))
         self.signals = stack.enter_context(patch.object(main.signal, "signal"))
         self.server = Mock()
         self.create_server = stack.enter_context(patch.object(

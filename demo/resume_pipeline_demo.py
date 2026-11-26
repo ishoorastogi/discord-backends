@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import base64
 from copy import deepcopy
+from dataclasses import replace
 import hashlib
 from importlib import import_module, util
 import json
@@ -78,12 +79,15 @@ def run(args) -> int:
     # Set before importing Hugging Face or the production entry point. No downloads,
     # file logging, ESCO caches, or bytecode are needed for this dictionary-mode demo.
     os.environ.update(HF_HUB_OFFLINE='1', TRANSFORMERS_OFFLINE='1', HF_HUB_DISABLE_TELEMETRY='1',
-                      LOG_FILE='', LOG_LEVEL='WARNING', ESCO_CSV='',
+                      LOG_FILE='', LOG_LEVEL='WARNING',
                       SHUTDOWN_TIMEOUT_SECONDS='10', TOKENIZERS_PARALLELISM='false')
     sys.dont_write_bytecode = True
     import numpy as np
 
     sys.path.insert(0, str(ROOT))
+    from internships.src import config
+
+    load_settings = config.load_settings
     application = runpy.run_path(str(ROOT / 'internships/src/main.py'), run_name='demo_entrypoint')
     router_module = import_module('event_router')
     listener = import_module('tcp_listener')
@@ -220,6 +224,9 @@ def run(args) -> int:
         from contextlib import ExitStack
         client = threading.Thread(target=upload, name='demo-tcp-client', daemon=True)
         with ExitStack() as instrumentation:
+            instrumentation.enter_context(patch.object(
+                config, 'load_settings', lambda: replace(load_settings(), esco_csv=None, esco_cache_dir=None),
+            ))
             instrumentation.enter_context(patch.object(router_module.EventRouter, 'route', observe))
             instrumentation.enter_context(patch.object(listener, 'create_server', bind_demo_server))
             if args.mock_model:

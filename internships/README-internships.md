@@ -51,18 +51,25 @@ source .venv/bin/activate
 python3 internships/src/main.py
 ```
 
-Set the TCP listener address in `internships/src/config.json`:
+Set the TCP listener address and ESCO paths in `internships/src/config.json`:
 
 ```json
 {
   "TCP_HOST": "127.0.0.1",
-  "TCP_PORT": 8000
+  "TCP_PORT": 8000,
+  "ESCO_CSV": "../data/esco/skills_en.csv",
+  "ESCO_CACHE_DIR": "../data/esco/cache"
 }
 ```
 
 `TCP_HOST` must be a nonempty string, and `TCP_PORT` must be a JSON integer from
 1 to 65535. The service always reads these values from this file, regardless of
 the working directory. Missing or invalid configuration exits with status 2.
+
+`ESCO_CSV` and `ESCO_CACHE_DIR` accept absolute paths and paths relative to
+`config.json`. The CSV points to the checked-in English skills dataset. Use
+`null` or omit `ESCO_CSV` for dictionary-only resume normalization. Use `null`
+or omit `ESCO_CACHE_DIR` to keep skill vectors in memory.
 
 `src/config.py` also loads `internships/src/.env` before logging is configured.
 Use that Git-ignored file for optional logging, queue, and shutdown settings.
@@ -71,7 +78,8 @@ Edit `src/config.py` for event listener defaults: logging level and optional log
 queue capacity, shutdown timeout, bind retry count and delay, message size limit,
 and receive buffer size. Logging, queue, and shutdown settings also accept
 environment overrides. Shell values take precedence over `.env` values, which
-take precedence over these defaults. Host and port come only from `config.json`.
+take precedence over these defaults. Host, port, and both ESCO paths come from
+`config.json`.
 
 Run the service tests from the repository root:
 

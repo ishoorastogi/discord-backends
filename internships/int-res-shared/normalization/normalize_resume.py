@@ -28,8 +28,10 @@ def flatten_skills(skills):
     return list(skills or [])
 
 
-def make_normalizer():
-    extractor = esco_skills.EscoSkillExtractor() if esco_skills.ESCO_CSV_PATH else None
+def make_normalizer(esco_csv=None, esco_cache_dir=None):
+    extractor = None
+    if esco_csv:
+        extractor = esco_skills.EscoSkillExtractor(csv_path=esco_csv, cache_dir=esco_cache_dir)
     return SkillNormalizer(extractor=extractor)
 
 

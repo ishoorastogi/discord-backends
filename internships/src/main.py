@@ -21,15 +21,14 @@ for module_dir in (
 ):
     sys.path.insert(0, str(module_dir))
 
-listener_config = import_module("listener-config")
-# The TCP listener imports the settings through the existing config module name.
-sys.modules["config"] = listener_config
+from internships.src import config
 from shared.logs.log_config import get_logger
 
 
 def main() -> None:
     # Load local configuration before any loggers or server modules are created.
-    listener_config.load_environment()
+    config.load_environment()
+    config.configure_ml_environment()
 
     # Configure logging on the main thread before importing server modules.
     try:
@@ -47,7 +46,7 @@ def main() -> None:
     tcp_listener = import_module("tcp_listener")
 
     try:
-        settings = listener_config.load_settings()
+        settings = config.load_settings()
     except ValueError as error:
         logger.error("%s", error)
         sys.exit(2)
@@ -60,6 +59,7 @@ def main() -> None:
     intake_queue = event_queue.create_queue(max_size)
     resume_queue = event_queue.create_queue(max_size)
     internship_queue = event_queue.create_queue(max_size)
+    writer_queue = event_queue.create_queue(max_size)
 
     # Retained separately for a future writer; never drained by processing workers.
     result_queue = import_module("completion_results").get_result_queue(max_size)
@@ -70,13 +70,19 @@ def main() -> None:
     # Register supported event types
     intake_handler.register_handlers(router, resume_queue=resume_queue, internship_queue=internship_queue)
     internship_handler.register_handlers(router, internship_queue=internship_queue)
-    resume_handler.register_handlers(router, resume_queue=resume_queue, result_queue=result_queue)
+    resume_handler.register_handlers(
+        router, resume_queue=resume_queue, writer_queue=writer_queue,
+        result_queue=result_queue, esco_csv=settings.esco_csv, esco_cache_dir=settings.esco_cache_dir,
+    )
+    #need to make:
+    # writer.register_handlers(router, writer_queue=writer_queue)
 
     # Register the router with the event queue worker
     registry.register(partial(intake_handler.process_event, router=router))
     intake_worker = event_queue.Worker(intake_queue, registry)
     resume_worker = event_queue.Worker(resume_queue, registry)
     internship_worker = event_queue.Worker(internship_queue, registry)
+    writer_worker = event_queue.Worker(writer_queue, registry)
 
     server = None
     stopping = threading.Event()
@@ -94,9 +100,10 @@ def main() -> None:
     intake_worker.start()
     resume_worker.start()
     internship_worker.start()
+    writer_worker.start()
 
     try:
-        for attempt in range(1, listener_config.BIND_ATTEMPTS + 1):
+        for attempt in range(1, config.BIND_ATTEMPTS + 1):
             if stopping.is_set():
                 return
             try:
@@ -105,12 +112,12 @@ def main() -> None:
             except OSError:
                 logger.warning(
                     "Bind failed: host=%s port=%s attempt=%s/%s",
-                    host, port, attempt, listener_config.BIND_ATTEMPTS,
+                    host, port, attempt, config.BIND_ATTEMPTS,
                 )
-                if attempt == listener_config.BIND_ATTEMPTS:
-                    logger.error("Unable to bind server after %s attempts", listener_config.BIND_ATTEMPTS)
+                if attempt == config.BIND_ATTEMPTS:
+                    logger.error("Unable to bind server after %s attempts", config.BIND_ATTEMPTS)
                     sys.exit(1)
-                if stopping.wait(listener_config.BIND_RETRY_DELAY_SECONDS):
+                if stopping.wait(config.BIND_RETRY_DELAY_SECONDS):
                     return
 
         if not stopping.is_set():
@@ -132,11 +139,15 @@ def main() -> None:
             undelivered = event_queue.drain(intake_queue, remaining_time())
             undelivered += event_queue.drain(resume_queue, remaining_time())
             undelivered += event_queue.drain(internship_queue, remaining_time())
+            undelivered += event_queue.drain(writer_queue, remaining_time())
             logger.info("drain completed: remaining=%s", undelivered)
             workers_alive = event_queue.stop_workers(intake_queue, [intake_worker], remaining_time(), "intake queue")
             workers_alive += event_queue.stop_workers(resume_queue, [resume_worker], remaining_time(), "resume queue")
             workers_alive += event_queue.stop_workers(
                 internship_queue, [internship_worker], remaining_time(), "internship queue",
+            )
+            workers_alive += event_queue.stop_workers(
+                writer_queue, [writer_worker], remaining_time(), "writer queue",
             )
             if undelivered or workers_alive or clients_alive:
                 logger.warning(

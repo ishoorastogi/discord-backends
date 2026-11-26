@@ -13,7 +13,8 @@ so its notion of "close" is tuned for skills.
 
 SETUP (one time)
   1. Download the ESCO dataset (CSV, English) from the ESCO website's download page.
-  2. Set ESCO_CSV to the skills file path (for example skills_en.csv).
+  2. Set ESCO_CSV in internships/src/config.json to the skills file path.
+     Set ESCO_CACHE_DIR there to persist skill vectors in a writable directory.
   3. python -m pip install sentence-transformers numpy
 """
 import csv
@@ -25,13 +26,6 @@ import numpy as np
 
 # ---------------------------------------------------------------- config (all in one place)
 CONTEXT_MODEL_NAME = "TechWolf/ConTeXT-Skill-Extraction-base"
-
-# Optional ESCO dataset. An explicitly configured invalid path fails initialization.
-import os
-ESCO_CSV_PATH = os.environ.get("ESCO_CSV", "").strip()
-
-# Optional writable external cache; default keeps ESCO vectors in memory only.
-CACHE_DIR = os.environ.get("ESCO_CACHE_DIR", "").strip() or None
 
 # STARTING GUESS, not a tested value. Tune it with:  python esco_skills.py
 DEFAULT_MIN_SCORE = 0.50
@@ -71,9 +65,13 @@ class EscoSkillExtractor:
     """
 
     def __init__(self, csv_path=None, skills=None, embed_fn=None,
-                 model_name=CONTEXT_MODEL_NAME, cache_dir=CACHE_DIR,
+                 model_name=CONTEXT_MODEL_NAME, cache_dir=None,
                  min_score=DEFAULT_MIN_SCORE):
-        self.skills = skills if skills is not None else load_esco_skills(csv_path or ESCO_CSV_PATH)
+        if skills is None:
+            if not csv_path:
+                raise ValueError("An ESCO skills CSV path is required")
+            skills = load_esco_skills(csv_path)
+        self.skills = skills
         self.model_name = model_name
         self.cache_dir = cache_dir
         self.min_score = min_score
@@ -156,11 +154,16 @@ class EscoSkillExtractor:
 
 # ---------------------------------------------------------------- tuning demo
 if __name__ == "__main__":
-    if not ESCO_CSV_PATH:
-        raise SystemExit("Set the ESCO_CSV environment variable first.")
-    extractor = EscoSkillExtractor()
-    print(f"Loaded {len(extractor.skills)} ESCO skills. "
-          "The first run embeds them all (a few minutes); later runs reuse the saved file.\n")
+    import sys
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+    from internships.src.config import load_settings
+
+    settings = load_settings()
+    if settings.esco_csv is None:
+        raise SystemExit("Set ESCO_CSV in internships/src/config.json first.")
+    extractor = EscoSkillExtractor(csv_path=settings.esco_csv, cache_dir=settings.esco_cache_dir)
+    print(f"Loaded {len(extractor.skills)} ESCO skills.\n")
     for phrase in ["JS", "Postgre SQL", "TensorFlow", "Kubernetes",
                    "Built REST APIs in Flask serving 10k requests per day",
                    "Baked 200 croissants daily"]:

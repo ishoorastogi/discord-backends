@@ -11,9 +11,9 @@ logger = get_logger("resume handler")
 
 
 @lru_cache(maxsize=1)
-def get_normalizer():
+def get_normalizer(esco_csv=None, esco_cache_dir=None):
     from normalization.normalize_resume import make_normalizer
-    normalizer = make_normalizer()
+    normalizer = make_normalizer(esco_csv, esco_cache_dir)
     if normalizer.extractor is None:
-        logger.info("ESCO semantic layer disabled: set ESCO_CSV to enable it")
+        logger.info("ESCO semantic layer disabled: set ESCO_CSV in internships/src/config.json")
     return normalizer

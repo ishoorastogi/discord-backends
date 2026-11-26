@@ -137,13 +137,15 @@ def dictionary_names_missing_from_esco(lookup, esco_skills):
 
 
 if __name__ == "__main__":
-    import normalization.esco_skills as esco_skills
+    from internships.src.config import load_settings
+    from .normalize_resume import make_normalizer
 
-    extractor = esco_skills.EscoSkillExtractor() if esco_skills.ESCO_CSV_PATH else None
+    settings = load_settings()
+    norm = make_normalizer(settings.esco_csv, settings.esco_cache_dir)
+    extractor = norm.extractor
     print("Layer 1 (dictionary): ON")
-    print("Layer 2 (ConTeXT + ESCO):", "ON" if extractor else "OFF (set ESCO_CSV_PATH in esco_skills.py)", "\n")
+    print("Layer 2 (ConTeXT + ESCO):", "ON" if extractor else "OFF (set ESCO_CSV in internships/src/config.json)", "\n")
 
-    norm = SkillNormalizer(extractor=extractor)
     print("SHORT ITEMS")
     for r in norm.normalize_items(["JS", "Postgres", "Tensor Flow", "Kubernetes", "pastry"]):
         print(f"  {r.original!r:<14} -> {r.name!r:<32} via {r.source} ({r.score})")
