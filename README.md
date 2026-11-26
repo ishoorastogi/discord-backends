@@ -8,9 +8,13 @@ Structured field extraction is in
 [`internships/resume-pipeline/extraction`](internships/resume-pipeline/extraction/README.md).
 
 Run `./installer.sh` with Python 3.10 or newer installed. It creates a root
-`.venv`, installs the listener, parser, extraction, and test dependencies, and
-initializes `internships/src/.env` if missing. Existing environment settings
-are preserved. Set `PYTHON_BIN` to select a different Python interpreter.
+`.venv`, installs the backend and test packages, and caches the inference
+models used by the resume pipeline. It enables model downloads for setup,
+verifies the cache with networking disabled, and enables offline mode in
+`internships/src/config.py` for backend startup. The ESCO dataset is verified as
+`skills_en.csv` when configured. It also initializes `internships/src/.env` if
+missing and prints setup links for dependencies that need manual steps.
+Set `PYTHON_BIN` to select an interpreter when creating a new `.venv`.
 
 ```sh
 ./installer.sh

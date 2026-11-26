@@ -12,7 +12,7 @@ requests>=2.31,<3
 # Resume parsing, normalization, and vectorization.
 pypdf>=4.0
 numpy>=1.23
-sentence-transformers>=2.3.0
+sentence-transformers>=3.0.0
 
 # Repository tests.
 pytest>=8.0

@@ -45,9 +45,11 @@ def _rewrite_hub_offline_warning(record: logging.LogRecord) -> bool:
     return True
 
 
-def configure_ml_environment() -> None:
-    os.environ["HF_HUB_OFFLINE"] = "1" if HF_HUB_OFFLINE else "0"
-    os.environ["TRANSFORMERS_OFFLINE"] = "1" if TRANSFORMERS_OFFLINE else "0"
+def configure_ml_environment(*, offline: bool | None = None) -> None:
+    hub_offline = HF_HUB_OFFLINE if offline is None else offline
+    transformers_offline = TRANSFORMERS_OFFLINE if offline is None else offline
+    os.environ["HF_HUB_OFFLINE"] = "1" if hub_offline else "0"
+    os.environ["TRANSFORMERS_OFFLINE"] = "1" if transformers_offline else "0"
     logging.getLogger("huggingface_hub.hf_api").addFilter(_rewrite_hub_offline_warning)
 
 def load_environment() -> None:
