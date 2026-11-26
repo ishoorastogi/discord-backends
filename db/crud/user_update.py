@@ -2,8 +2,8 @@
 
 Behaves like an update-or-create: if no member matches, a new one is created.
 """
-from crud.query import with_transaction
-from crud.user_queries import (
+from db.crud.query import with_transaction
+from db.crud.user_queries import (
     insert_query,
     matching_users_query,
     normalize_name,

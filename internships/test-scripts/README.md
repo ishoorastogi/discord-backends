@@ -3,6 +3,30 @@
 Run these scripts to inspect backend behavior manually. Automated tests live in
 `../tests/`.
 
+## Read a database user
+
+Install dependencies from the repository root:
+
+```sh
+python3 -m pip install -r requirements.txt
+```
+
+Set `DB_USER` and `DB_PASSWORD` in `internships/src/.env` to your PostgreSQL
+credentials. Set `DB_HOST`, `DB_PORT`, and `DB_NAME` in `shared/db-utils/.env`.
+All five settings are required and must match your running database.
+Existing shell environment variables take precedence over these files.
+
+Read the first user, or select one by Discord ID:
+
+```sh
+python3 internships/test-scripts/read_user.py
+python3 internships/test-scripts/read_user.py 123456789012345678
+```
+
+The script resolves both `.env` files relative to its own location, opens a read-only
+transaction, and prints the user as JSON. It exits with a nonzero status for
+invalid settings, connection/query errors, or no matching user.
+
 ## Resume parsing
 
 Install the shared models, parser, and extraction packages from the repository root:

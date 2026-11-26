@@ -1,6 +1,6 @@
 """Insert, bulk insert, and upsert for users (Python version of the Node.js insert file)."""
-from crud.query import query_rows, with_transaction
-from crud.user_queries import (
+from db.crud.query import query_rows, with_transaction
+from db.crud.user_queries import (
     insert_query,
     matching_users_query,
     unique_user,
